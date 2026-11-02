@@ -11,7 +11,7 @@ A static, responsive chama dashboard prototype.
 
 ## Publish with GitHub Pages
 
-1. Add `index.html`, this `README.md`, and `.github/workflows/deploy-pages.yml` to the root of the `main` branch.
+1. Push the site files to the repository's `main` branch.
 2. In the repository, open **Settings → Pages** and set the build and deployment source to **GitHub Actions**.
 3. Open **Actions** and confirm that **Deploy static site to GitHub Pages** succeeds.
 4. Open **Settings → Pages** to find the published site URL.
