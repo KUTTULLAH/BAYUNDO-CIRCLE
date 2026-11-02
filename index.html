@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f5">
+  <meta name="description" content="A clear, practical dashboard for managing chama members and contributions.">
+  <title>Jirani Circle — Chama dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17241d;
+      --muted: #78827b;
+      --line: #e8ebe7;
+      --paper: #fff;
+      --canvas: #f6f7f5;
+      --green: #23734d;
+      --green-dark: #195d3d;
+      --green-pale: #eaf4ed;
+      --orange: #e99b4b;
+      --orange-pale: #fff3e5;
+      --red: #bd4d46;
+      --red-pale: #fbecea;
+      --shadow: 0 8px 26px rgb(23 36 29 / 5%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-width: 320px; margin: 0; background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .app { display: grid; min-height: 100vh; grid-template-columns: 248px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; display: flex; height: 100vh; flex-direction: column; padding: 27px 17px 18px; border-right: 1px solid var(--line); background: var(--paper); }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 31px; }
+    .brand-mark { display: grid; width: 37px; height: 37px; place-items: center; border-radius: 12px; background: var(--green); color: white; font-size: 19px; font-weight: 800; }
+    .brand-name { font-size: 16px; font-weight: 780; letter-spacing: -.5px; }
+    .brand-subtitle { display: block; margin-top: 1px; color: var(--muted); font-size: 10px; font-weight: 550; letter-spacing: .3px; }
+    .nav-label { margin: 0 10px 10px; color: #a0a8a2; font-size: 10px; font-weight: 750; letter-spacing: 1px; text-transform: uppercase; }
+    .nav-list { display: grid; gap: 5px; }
+    .nav-link { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 0 11px; border-radius: 8px; color: #68746c; font-size: 13px; font-weight: 620; }
+    .nav-link:hover, .nav-link.active { background: var(--green-pale); color: var(--green-dark); }
+    .nav-icon { display: grid; width: 20px; place-items: center; font-size: 16px; }
+    .sidebar-bottom { margin-top: auto; }
+    .help-card { margin: 0 2px 18px; padding: 15px; border: 1px solid var(--line); border-radius: 11px; background: #fbfcfa; }
+    .help-card strong { display: block; margin-bottom: 4px; font-size: 12px; }
+    .help-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .user-card { display: flex; align-items: center; gap: 10px; padding: 14px 8px 0; border-top: 1px solid var(--line); }
+    .avatar { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #e7eee8; color: var(--green-dark); font-size: 11px; font-weight: 750; }
+    .user-name { font-size: 12px; font-weight: 700; }
+    .user-role { color: var(--muted); font-size: 10px; }
+
+    .main { min-width: 0; }
+    .topbar { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 16px; padding: 0 38px; border-bottom: 1px solid var(--line); background: var(--paper); }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb strong { color: var(--ink); font-weight: 650; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .date-label { color: var(--muted); font-size: 11px; }
+    .page { width: min(1190px, 100%); margin: 0 auto; padding: 28px 38px 54px; }
+    .demo-notice { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 24px; padding: 12px 15px; border: 1px solid #f1dfc7; border-radius: 9px; background: #fffaf3; color: #76552f; font-size: 11px; }
+    .demo-notice strong { color: #66451f; }
+    .demo-notice p { margin: 0; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+    .eyebrow { margin: 0 0 5px; color: var(--green); font-size: 10px; font-weight: 750; letter-spacing: .8px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(24px, 3vw, 29px); font-weight: 750; letter-spacing: -.8px; line-height: 1.2; }
+    .heading-copy { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+    .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 680; white-space: nowrap; }
+    .button:hover { border-color: #b6c8bb; background: #fafcf9; }
+    .button-primary { border-color: var(--green); background: var(--green); color: white; }
+    .button-primary:hover { border-color: var(--green-dark); background: var(--green-dark); }
+    .button-icon { font-size: 15px; line-height: 1; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 17px; }
+    .stat-card { min-width: 0; padding: 17px 18px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow); }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .stat-label { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .stat-icon { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 8px; background: var(--green-pale); color: var(--green); font-size: 14px; }
+    .stat-icon.orange { background: var(--orange-pale); color: #ad6d24; }
+    .stat-value { overflow: hidden; margin: 13px 0 5px; font-size: clamp(21px, 2.5vw, 27px); font-weight: 760; letter-spacing: -.7px; text-overflow: ellipsis; white-space: nowrap; }
+    .stat-foot { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+    .stat-foot .positive { color: var(--green); font-weight: 700; }
+    .stat-foot .attention { color: #bd7528; font-weight: 700; }
+
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(255px, .85fr); gap: 16px; margin-bottom: 17px; }
+    .panel { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 19px; }
+    .panel-title { margin: 0; font-size: 13px; font-weight: 730; letter-spacing: -.15px; }
+    .panel-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+    .period-select { padding: 7px 25px 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: #536057; font-size: 10px; }
+    .chart-summary { padding: 0 19px 3px; }
+    .chart-total { margin: 0 0 3px; font-size: 22px; font-weight: 750; letter-spacing: -.4px; }
+    .chart-delta { color: var(--muted); font-size: 10px; }
+    .chart-delta span { color: var(--green); font-weight: 700; }
+    .chart { display: grid; height: 156px; grid-template-columns: repeat(7, 1fr); align-items: end; gap: 12px; padding: 17px 20px 0; }
+    .chart-column { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: flex-end; gap: 7px; }
+    .chart-bar-wrap { display: flex; width: 100%; height: 111px; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent 35px, #f1f3f0 36px); }
+    .chart-bar { width: min(25px, 70%); min-height: 5px; border-radius: 5px 5px 0 0; background: #b8d7c3; }
+    .chart-column:nth-child(4) .chart-bar, .chart-column:last-child .chart-bar { background: var(--green); }
+    .chart-label { padding-bottom: 10px; color: var(--muted); font-size: 9px; }
+    .chart-footer { display: flex; align-items: center; gap: 6px; padding: 0 19px 15px; color: var(--muted); font-size: 9px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    .collection-total { padding: 0 19px 8px; }
+    .collection-total strong { display: block; font-size: 22px; letter-spacing: -.3px; }
+    .collection-total span { color: var(--muted); font-size: 10px; }
+    .progress-list { display: grid; gap: 14px; padding: 12px 19px 19px; }
+    .progress-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 10px; }
+    .progress-label span:first-child { color: #5f6b62; }
+    .progress-label strong { font-weight: 700; }
+    .progress-track { height: 6px; overflow: hidden; border-radius: 5px; background: #eef0ed; }
+    .progress-fill { height: 100%; border-radius: inherit; background: var(--green); }
+    .progress-fill.orange { background: var(--orange); }
+
+    .table-panel { margin-bottom: 17px; }
+    .table-toolbar { display: flex; align-items: center; gap: 9px; }
+    .search { width: 188px; min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; outline: none; background: var(--paper); font-size: 10px; }
+    .search:focus, .field input:focus, .field select:focus { border-color: #72a487; box-shadow: 0 0 0 3px rgb(35 115 77 / 10%); }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 10px 18px; border-block: 1px solid #f0f1ef; background: #fbfcfb; color: #8a938c; font-size: 9px; font-weight: 720; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+    td { padding: 12px 18px; border-bottom: 1px solid #f1f2f0; color: #536057; font-size: 10px; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fcfdfb; }
+    .member-cell { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 10px; font-weight: 680; }
+    .member-cell .avatar { width: 29px; height: 29px; font-size: 9px; }
+    .member-id { display: block; margin-top: 2px; color: #929b94; font-size: 9px; font-weight: 500; }
+    .amount { color: var(--ink); font-weight: 700; }
+    .status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+    .status::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }
+    .status-paid { background: var(--green-pale); color: var(--green); }
+    .status-due { background: var(--orange-pale); color: #a9651c; }
+    .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+    .link-button { padding: 0; border: 0; background: none; color: var(--green); font-size: 10px; font-weight: 700; }
+    .link-button:hover { color: var(--green-dark); text-decoration: underline; }
+    .transactions-table td { padding-block: 11px; }
+    .payment-method { color: #7b867d; }
+
+    .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; background: rgb(20 30 24 / 42%); }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(440px, 100%); max-height: min(90vh, 700px); overflow-y: auto; padding: 22px; border-radius: 12px; background: var(--paper); box-shadow: 0 20px 70px rgb(0 0 0 / 18%); }
+    .modal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .modal-heading h2 { margin: 0; font-size: 18px; letter-spacing: -.3px; }
+    .modal-heading p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .close-button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 6px; background: #f2f4f1; color: #58625a; font-size: 17px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .field { display: grid; gap: 6px; }
+    .field-wide { grid-column: 1 / -1; }
+    .field label { color: #566158; font-size: 10px; font-weight: 700; }
+    .field input, .field select { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; outline: none; background: white; font-size: 11px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .toast { position: fixed; z-index: 12; right: 20px; bottom: 20px; max-width: min(360px, calc(100vw - 40px)); padding: 12px 16px; border: 1px solid #cfe2d4; border-radius: 8px; background: #f1faf3; color: var(--green-dark); box-shadow: var(--shadow); font-size: 11px; }
+    .toast[hidden] { display: none; }
+    .empty-state { padding: 24px; color: var(--muted); font-size: 11px; text-align: center; }
+    .mobile-brand, .mobile-toggle { display: none; }
+
+    @media (max-width: 1050px) {
+      .app { grid-template-columns: 215px minmax(0, 1fr); }
+      .topbar { padding-inline: 25px; }
+      .page { padding-inline: 25px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .content-grid { grid-template-columns: minmax(0, 1.25fr) minmax(225px, .85fr); }
+    }
+    @media (max-width: 760px) {
+      .app { display: block; }
+      .sidebar { position: fixed; z-index: 8; top: 0; bottom: 0; left: 0; width: min(280px, 85vw); height: 100dvh; transform: translateX(-105%); transition: transform .2s ease; box-shadow: 8px 0 30px rgb(0 0 0 / 8%); }
+      .sidebar.open { transform: translateX(0); }
+      .topbar { min-height: 61px; padding-inline: 17px; }
+      .mobile-brand { display: flex; align-items: center; gap: 8px; margin-right: auto; font-size: 12px; font-weight: 750; }
+      .mobile-brand .brand-mark { width: 28px; height: 28px; border-radius: 8px; font-size: 14px; }
+      .mobile-toggle { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: white; font-size: 17px; }
+      .crumb, .date-label { display: none; }
+      .page { padding: 22px 17px 40px; }
+      .page-heading { align-items: flex-start; }
+      .page-heading .button { min-height: 36px; padding-inline: 10px; }
+      .content-grid { grid-template-columns: 1fr; }
+      .stats { gap: 10px; }
+      .stat-card { padding: 14px; }
+      .table-toolbar .search { width: 145px; }
+      .hide-mobile { display: none; }
+    }
+    @media (max-width: 460px) {
+      .demo-notice { font-size: 10px; }
+      .page-heading { flex-direction: column; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat-label { font-size: 10px; }
+      .stat-value { font-size: 21px; }
+      .stat-foot { align-items: flex-start; flex-direction: column; gap: 1px; }
+      .panel-header { padding-inline: 14px; }
+      .table-toolbar { width: 100%; }
+      .table-toolbar .search { width: 100%; }
+      .table-toolbar .button { padding-inline: 8px; }
+      .table-panel .panel-header { align-items: flex-start; flex-direction: column; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field-wide { grid-column: auto; }
+      .chart { gap: 7px; padding-inline: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+      <a class="brand" href="#" aria-label="Jirani Circle home">
+        <span class="brand-mark" aria-hidden="true">J</span>
+        <span class="brand-name">Jirani Circle<span class="brand-subtitle">Chama management</span></span>
+      </a>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav-list" aria-label="Main navigation">
+        <a class="nav-link active" href="#overview"><span class="nav-icon" aria-hidden="true">▦</span>Overview</a>
+        <a class="nav-link" href="#members"><span class="nav-icon" aria-hidden="true">♧</span>Members</a>
+        <a class="nav-link" href="#contributions"><span class="nav-icon" aria-hidden="true">↗</span>Contributions</a>
+        <a class="nav-link" href="#reports"><span class="nav-icon" aria-hidden="true">▤</span>Reports</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-card"><strong>Need a hand?</strong><p>Keep your group's records clear and up to date. More help options are coming soon.</p></div>
+        <div class="user-card"><span class="avatar">AM</span><span><span class="user-name">Admin Member</span><br><span class="user-role">Group administrator</span></span></div>
+      </div>
+    </aside>
+
+    <main class="main" id="overview">
+      <header class="topbar">
+        <button class="mobile-toggle" id="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="mobile-brand"><span class="brand-mark" aria-hidden="true">J</span>Jirani Circle</div>
+        <div class="crumb">Workspace <span aria-hidden="true">/</span> <strong>Overview</strong></div>
+        <div class="top-actions"><span class="date-label" id="today-label"></span><button class="button" id="export-button" type="button"><span class="button-icon" aria-hidden="true">↓</span><span class="hide-mobile">Export</span></button></div>
+      </header>
+
+      <div class="page">
+        <div class="demo-notice" role="note">
+          <span aria-hidden="true">ⓘ</span>
+          <p><strong>Prototype with sample data.</strong> Changes are held in this page only and are not saved to a server or database. No accounts or real member records are connected yet.</p>
+        </div>
+
+        <section aria-labelledby="page-title">
+          <div class="page-heading">
+            <div><p class="eyebrow" id="greeting-date"></p><h1 id="page-title">Good afternoon, Admin</h1><p class="heading-copy">Here's what's happening with your chama.</p></div>
+            <button class="button button-primary" id="record-top" type="button"><span class="button-icon" aria-hidden="true">+</span>Record contribution</button>
+          </div>
+
+          <div class="stats" aria-label="Group summary">
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-label">Total savings</span><span class="stat-icon" aria-hidden="true">↗</span></div>
+              <p class="stat-value" id="total-savings">KES 0</p>
+              <div class="stat-foot"><span class="positive">This month</span><span>group contributions</span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-label">Active members</span><span class="stat-icon" aria-hidden="true">♧</span></div>
+              <p class="stat-value" id="active-members">0</p>
+              <div class="stat-foot"><span>Membership status</span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-label">Collected this month</span><span class="stat-icon" aria-hidden="true">▤</span></div>
+              <p class="stat-value" id="collected-month">KES 0</p>
+              <div class="stat-foot"><span class="positive">Current month</span><span>recorded payments</span></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-label">Members with balance due</span><span class="stat-icon orange" aria-hidden="true">◷</span></div>
+              <p class="stat-value" id="members-due">0</p>
+              <div class="stat-foot"><span class="attention" id="due-total">KES 0</span><span>outstanding this month</span></div>
+            </article>
+          </div>
+
+          <div class="content-grid" id="reports">
+            <section class="panel" aria-labelledby="chart-title">
+              <div class="panel-header"><div><h2 class="panel-title" id="chart-title">Contribution overview</h2><p class="panel-subtitle">Your group's savings at a glance</p></div><span class="period-select">Last 7 days</span></div>
+              <div class="chart-summary"><p class="chart-total" id="chart-total">KES 0</p><div class="chart-delta"><span>Regular contributions</span> · KES</div></div>
+              <div class="chart" id="chart" role="img" aria-label="Contribution totals across the last seven days"></div>
+              <div class="chart-footer"><span class="legend-dot"></span> Contributions received</div>
+            </section>
+            <section class="panel" aria-labelledby="collection-title">
+              <div class="panel-header"><div><h2 class="panel-title" id="collection-title">Monthly collection</h2><p class="panel-subtitle">Member payment progress</p></div><span class="status status-paid">On track</span></div>
+              <div class="collection-total"><strong id="collection-progress">0 of 0</strong><span>members contributed this month</span></div>
+              <div class="progress-list">
+                <div><div class="progress-label"><span>Paid in full</span><strong id="paid-count">0 members</strong></div><div class="progress-track"><div class="progress-fill" id="paid-progress" style="width:0%"></div></div></div>
+                <div><div class="progress-label"><span>Payment outstanding</span><strong id="due-count">0 members</strong></div><div class="progress-track"><div class="progress-fill orange" id="due-progress" style="width:0%"></div></div></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel table-panel" id="members" aria-labelledby="members-title">
+          <div class="panel-header">
+            <div><h2 class="panel-title" id="members-title">Member contributions</h2><p class="panel-subtitle">A quick look at this month's member payments</p></div>
+            <div class="table-toolbar"><input class="search" id="member-search" type="search" placeholder="Search members..." aria-label="Search members"><button class="button" id="add-member" type="button"><span class="button-icon" aria-hidden="true">+</span><span class="hide-mobile">Add member</span></button></div>
+          </div>
+          <div class="table-scroll"><table>
+            <thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Monthly target</th><th scope="col">Last payment</th><th scope="col">Status</th></tr></thead>
+            <tbody id="member-rows"></tbody>
+          </table></div>
+          <div class="table-foot"><span id="member-count-label">Showing 0 members</span><button class="link-button" id="clear-search" type="button">Clear search</button></div>
+        </section>
+
+        <section class="panel table-panel" id="contributions" aria-labelledby="transactions-title">
+          <div class="panel-header"><div><h2 class="panel-title" id="transactions-title">Recent contributions</h2><p class="panel-subtitle">Latest payments recorded by your group</p></div><button class="link-button" id="view-all" type="button">View all</button></div>
+          <div class="table-scroll"><table class="transactions-table">
+            <thead><tr><th scope="col">Member</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Reference</th><th scope="col">Amount</th></tr></thead>
+            <tbody id="transaction-rows"></tbody>
+          </table></div>
+          <div class="table-foot"><span id="transaction-count-label">Showing 0 contributions</span><span>Sample data</span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
+      <div class="modal-heading"><div><h2 id="modal-title">Record a contribution</h2><p id="modal-description">Enter the payment details below.</p></div><button class="close-button" id="modal-close" type="button" aria-label="Close dialog">×</button></div>
+      <form id="modal-form">
+        <div class="form-grid" id="form-fields"></div>
+        <div class="form-actions"><button class="button" id="modal-cancel" type="button">Cancel</button><button class="button button-primary" id="modal-submit" type="submit">Save contribution</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script>
+    (() => {
+      const monthlyTarget = 5000;
+      const members = [
+        { id: 'JC-001', name: 'Wanjiku Njeri', phone: '0712 345 678', status: 'Active' },
+        { id: 'JC-002', name: 'Brian Otieno', phone: '0723 456 789', status: 'Active' },
+        { id: 'JC-003', name: 'Amina Hassan', phone: '0734 567 890', status: 'Active' },
+        { id: 'JC-004', name: 'Peter Mwangi', phone: '0745 678 901', status: 'Active' },
+        { id: 'JC-005', name: 'Grace Wambui', phone: '0756 789 012', status: 'Active' },
+        { id: 'JC-006', name: 'David Kiptoo', phone: '0767 890 123', status: 'Active' }
+      ];
+      const contributions = [
+        { id: 'JC-001', name: 'Wanjiku Njeri', amount: 5000, date: '2026-11-02', method: 'M-Pesa', reference: 'QMK7A2P1' },
+        { id: 'JC-002', name: 'Brian Otieno', amount: 3000, date: '2026-11-02', method: 'Bank transfer', reference: 'BK-882104' },
+        { id: 'JC-003', name: 'Amina Hassan', amount: 5000, date: '2026-11-01', method: 'M-Pesa', reference: 'QML2C5D8' },
+        { id: 'JC-004', name: 'Peter Mwangi', amount: 2000, date: '2026-10-30', method: 'Cash', reference: 'CSH-0142' },
+        { id: 'JC-005', name: 'Grace Wambui', amount: 5000, date: '2026-10-29', method: 'M-Pesa', reference: 'QMK8E3W2' }
+      ];
+      const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
+      const formatMoney = (amount) => `KES ${money.format(amount)}`;
+      const initials = (name) => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+      const dateText = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthEntries = () => contributions.filter((entry) => entry.date.startsWith(monthKey));
+      const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+      const render = () => {
+        const monthEntries = currentMonthEntries();
+        const totals = new Map(members.map((member) => [member.id, 0]));
+        contributions.forEach((entry) => totals.set(entry.id, (totals.get(entry.id) || 0) + entry.amount));
+        const monthTotals = new Map(members.map((member) => [member.id, 0]));
+        monthEntries.forEach((entry) => monthTotals.set(entry.id, (monthTotals.get(entry.id) || 0) + entry.amount));
+        const paid = members.filter((member) => (monthTotals.get(member.id) || 0) >= monthlyTarget).length;
+        const due = members.filter((member) => member.status === 'Active' && (monthTotals.get(member.id) || 0) < monthlyTarget);
+        const dueAmount = due.reduce((sum, member) => sum + monthlyTarget - (monthTotals.get(member.id) || 0), 0);
+        const totalSavings = contributions.reduce((sum, entry) => sum + entry.amount, 0);
+        const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
+        document.querySelector('#total-savings').textContent = formatMoney(totalSavings);
+        document.querySelector('#active-members').textContent = members.filter((member) => member.status === 'Active').length;
+        document.querySelector('#collected-month').textContent = formatMoney(monthTotal);
+        document.querySelector('#members-due').textContent = due.length;
+        document.querySelector('#due-total').textContent = formatMoney(dueAmount);
+        document.querySelector('#chart-total').textContent = formatMoney(monthTotal);
+        document.querySelector('#collection-progress').textContent = `${paid} of ${members.length}`;
+        document.querySelector('#paid-count').textContent = `${paid} members`;
+        document.querySelector('#due-count').textContent = `${due.length} members`;
+        document.querySelector('#paid-progress').style.width = `${members.length ? paid / members.length * 100 : 0}%`;
+        document.querySelector('#due-progress').style.width = `${members.length ? due.length / members.length * 100 : 0}%`;
+        renderChart(monthEntries);
+        renderMembers();
+        renderContributions();
+      };
+
+      const renderChart = (entries) => {
+        const days = Array.from({ length: 7 }, (_, index) => {
+          const date = new Date();
+          date.setDate(date.getDate() - 6 + index);
+          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          return { key, label: date.toLocaleDateString('en', { weekday: 'short' }), amount: entries.filter((entry) => entry.date === key).reduce((sum, entry) => sum + entry.amount, 0) };
+        });
+        const max = Math.max(monthlyTarget, ...days.map((day) => day.amount));
+        document.querySelector('#chart').innerHTML = days.map((day) => `<div class="chart-column" title="${escapeHtml(day.label)}: ${formatMoney(day.amount)}"><div class="chart-bar-wrap"><div class="chart-bar" style="height:${Math.max(4, day.amount / max * 100)}%"></div></div><span class="chart-label">${escapeHtml(day.label)}</span></div>`).join('');
+      };
+
+      const renderMembers = () => {
+        const query = document.querySelector('#member-search').value.trim().toLowerCase();
+        const monthly = new Map(members.map((member) => [member.id, 0]));
+        currentMonthEntries().forEach((entry) => monthly.set(entry.id, (monthly.get(entry.id) || 0) + entry.amount));
+        const filtered = members.filter((member) => `${member.name} ${member.id} ${member.phone}`.toLowerCase().includes(query));
+        const rows = filtered.map((member) => {
+          const amount = monthly.get(member.id) || 0;
+          const latest = contributions.filter((entry) => entry.id === member.id).sort((a, b) => b.date.localeCompare(a.date))[0];
+          const paid = amount >= monthlyTarget;
+          return `<tr><td><div class="member-cell"><span class="avatar">${escapeHtml(initials(member.name))}</span><span>${escapeHtml(member.name)}<span class="member-id">${escapeHtml(member.id)} · ${escapeHtml(member.phone)}</span></span></div></td><td class="amount">${formatMoney(amount)}</td><td>${formatMoney(monthlyTarget)}</td><td>${latest ? dateText(latest.date) : '—'}</td><td><span class="status ${paid ? 'status-paid' : 'status-due'}">${paid ? 'Paid' : 'Due'}</span></td></tr>`;
+        }).join('');
+        document.querySelector('#member-rows').innerHTML = rows || '<tr><td colspan="5"><div class="empty-state">No members match your search.</div></td></tr>';
+        document.querySelector('#member-count-label').textContent = `Showing ${filtered.length} of ${members.length} members`;
+      };
+
+      const renderContributions = () => {
+        const recent = [...contributions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+        document.querySelector('#transaction-rows').innerHTML = recent.length ? recent.map((entry) => `<tr><td><div class="member-cell"><span class="avatar">${escapeHtml(initials(entry.name))}</span><span>${escapeHtml(entry.name)}<span class="member-id">${escapeHtml(entry.id)}</span></span></div></td><td>${dateText(entry.date)}</td><td class="payment-method">${escapeHtml(entry.method)}</td><td>${escapeHtml(entry.reference)}</td><td class="amount">${formatMoney(entry.amount)}</td></tr>`).join('') : '<tr><td colspan="5"><div class="empty-state">No contributions recorded yet.</div></td></tr>';
+        document.querySelector('#transaction-count-label').textContent = `Showing ${recent.length} of ${contributions.length} contributions`;
+      };
+
+      const backdrop = document.querySelector('#modal-backdrop');
+      const formFields = document.querySelector('#form-fields');
+      let modalMode = 'contribution';
+      let toastTimer;
+      const showToast = (message) => {
+        const toast = document.querySelector('#toast');
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
+      };
+      const openModal = (mode) => {
+        modalMode = mode;
+        const addMember = mode === 'member';
+        document.querySelector('#modal-title').textContent = addMember ? 'Add a member' : 'Record a contribution';
+        document.querySelector('#modal-description').textContent = addMember ? 'Add a member to this sample group.' : 'Enter the payment details below.';
+        document.querySelector('#modal-submit').textContent = addMember ? 'Add member' : 'Save contribution';
+        formFields.innerHTML = addMember
+          ? '<div class="field field-wide"><label for="member-name">Full name</label><input id="member-name" name="name" autocomplete="name" required maxlength="80"></div><div class="field field-wide"><label for="member-phone">Phone number</label><input id="member-phone" name="phone" type="tel" autocomplete="tel" required maxlength="20" placeholder="07XX XXX XXX"></div>'
+          : `<div class="field field-wide"><label for="contribution-member">Member</label><select id="contribution-member" name="member" required>${members.filter((member) => member.status === 'Active').map((member) => `<option value="${escapeHtml(member.id)}">${escapeHtml(member.name)} (${escapeHtml(member.id)})</option>`).join('')}</select></div><div class="field"><label for="contribution-amount">Amount (KES)</label><input id="contribution-amount" name="amount" type="number" min="1" step="1" required></div><div class="field"><label for="contribution-date">Payment date</label><input id="contribution-date" name="date" type="date" value="${todayKey}" required></div><div class="field"><label for="contribution-method">Payment method</label><select id="contribution-method" name="method" required><option>M-Pesa</option><option>Bank transfer</option><option>Cash</option></select></div><div class="field"><label for="contribution-reference">Reference</label><input id="contribution-reference" name="reference" maxlength="40" required></div>`;
+        backdrop.classList.add('open');
+        backdrop.setAttribute('aria-hidden', 'false');
+        document.querySelector('#modal-form').reset();
+        const dateInput = document.querySelector('#contribution-date');
+        if (dateInput) dateInput.value = todayKey;
+        formFields.querySelector('input, select')?.focus();
+      };
+      const closeModal = () => {
+        backdrop.classList.remove('open');
+        backdrop.setAttribute('aria-hidden', 'true');
+      };
+
+      document.querySelector('#record-top').addEventListener('click', () => openModal('contribution'));
+      document.querySelector('#add-member').addEventListener('click', () => openModal('member'));
+      document.querySelector('#modal-close').addEventListener('click', closeModal);
+      document.querySelector('#modal-cancel').addEventListener('click', closeModal);
+      backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && backdrop.classList.contains('open')) closeModal(); });
+      document.querySelector('#modal-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const values = new FormData(event.currentTarget);
+        if (modalMode === 'member') {
+          const name = String(values.get('name')).trim();
+          const phone = String(values.get('phone')).trim();
+          if (!name || !phone) return;
+          const id = `JC-${String(Math.max(0, ...members.map((member) => Number(member.id.split('-')[1]) || 0)) + 1).padStart(3, '0')}`;
+          members.push({ id, name, phone, status: 'Active' });
+          closeModal();
+          render();
+          showToast(`${name} added to this sample group.`);
+          return;
+        }
+        const memberId = String(values.get('member'));
+        const member = members.find((item) => item.id === memberId);
+        const amount = Number(values.get('amount'));
+        const date = String(values.get('date'));
+        const reference = String(values.get('reference')).trim();
+        if (!member || !Number.isSafeInteger(amount) || amount <= 0 || !date || !reference) {
+          showToast('Check the contribution details and try again.');
+          return;
+        }
+        contributions.push({ id: member.id, name: member.name, amount, date, method: String(values.get('method')), reference });
+        closeModal();
+        render();
+        showToast('Contribution added to this sample session.');
+      });
+
+      document.querySelector('#member-search').addEventListener('input', renderMembers);
+      document.querySelector('#clear-search').addEventListener('click', () => {
+        document.querySelector('#member-search').value = '';
+        renderMembers();
+      });
+      document.querySelector('#export-button').addEventListener('click', () => {
+        showToast('Export is not connected in this prototype.');
+      });
+      document.querySelector('#view-all').addEventListener('click', () => showToast('All contributions are shown in this prototype sample.'));
+
+      const sidebar = document.querySelector('#sidebar');
+      const menuToggle = document.querySelector('#menu-toggle');
+      menuToggle.addEventListener('click', () => {
+        const open = sidebar.classList.toggle('open');
+        menuToggle.setAttribute('aria-expanded', String(open));
+        menuToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      });
+      sidebar.querySelectorAll('.nav-link').forEach((link) => link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+      }));
+
+      document.querySelector('#today-label').textContent = today.toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      document.querySelector('#greeting-date').textContent = today.toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      render();
+    })();
+  </script>
+</body>
+</html>
