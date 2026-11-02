@@ -12,7 +12,8 @@ A static, responsive chama dashboard prototype.
 ## Publish with GitHub Pages
 
 1. Push the site files to the repository's `main` branch.
-2. Open **Actions** and confirm that **Deploy static site to GitHub Pages** succeeds. The workflow enables GitHub Pages automatically.
-3. Open **Settings → Pages** to find the published site URL.
+2. In the repository, open **Settings → Pages** and set the build and deployment source to **GitHub Actions**.
+3. Open **Actions** and confirm that **Deploy static site to GitHub Pages** succeeds.
+4. Open **Settings → Pages** to find the published site URL.
 
 The workflow deploys the contents of the repository root whenever a commit is pushed to `main`. Keep real financial and member data out of this public prototype.
