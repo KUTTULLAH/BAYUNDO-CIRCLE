@@ -33,7 +33,7 @@ $env:PORT = "8080"
 
 Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. The endpoint returns `503` until it can run a test query against the configured database.
 
-The **Build C++ API** GitHub Actions workflow builds the backend with Drogon's MySQL driver and runs a readiness check against a temporary MySQL 8 service when backend files change, on pull requests, or when started manually from the Actions tab.
+The **Build C++ API** GitHub Actions workflow builds the backend with Drogon's MySQL driver, applies the draft schema, and checks database readiness against a temporary MySQL 8 service when backend files change, on pull requests, or when started manually from the Actions tab.
 
 ## Publish with GitHub Pages
 

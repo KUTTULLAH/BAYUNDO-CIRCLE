@@ -24,6 +24,7 @@ jobs:
       DB_NAME: jirani_circle
       DB_USER: jirani_ci
       DB_PASSWORD: ci-only-password
+      MYSQL_ROOT_PASSWORD: ci-root-password
     services:
       mysql:
         image: mysql:8.0
@@ -46,7 +47,7 @@ jobs:
       - name: Install build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes autoconf automake build-essential curl libtool ninja-build pkg-config unzip zip
+          sudo apt-get install --yes autoconf automake build-essential curl default-mysql-client libtool ninja-build pkg-config unzip zip
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
@@ -72,6 +73,11 @@ jobs:
 
       - name: Build
         run: cmake --build backend/build --parallel 2
+
+      - name: Apply MySQL schema
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        run: mysql --host="$DB_HOST" --port="$DB_PORT" --user=root < backend/schema.sql
 
       - name: Check API and database readiness
         run: |
