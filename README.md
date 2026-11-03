@@ -11,7 +11,7 @@ A static, responsive chama dashboard prototype.
 
 ## Backend foundation
 
-- `backend/src/main.cc` is the first Drogon server scaffold. It currently implements only `GET /api/v1/health`; member and contribution endpoints are not implemented yet.
+- `backend/src/main.cc` currently implements `GET /api/v1/health` and a MySQL readiness check; member and contribution endpoints are not implemented yet.
 - [`backend/schema.sql`](./backend/schema.sql) is a draft MySQL schema for chama members, individually effective-dated monthly targets, invitations, sessions, financial transactions, access requests, and audit events.
 - [`backend/openapi.yaml`](./backend/openapi.yaml) is the API contract. Members read their own records; an admin can approve one read-only retrieval of another member's records for a requested date range.
 - Member accounts use phone-number sign-in and one-time activation invitations. Members set their own passwords; SMS/WhatsApp delivery still needs a provider.
@@ -20,7 +20,7 @@ A static, responsive chama dashboard prototype.
 
 ### Build the API on Windows
 
-Install Visual Studio Build Tools with the C++ workload, CMake, and vcpkg. Set `VCPKG_ROOT` to your vcpkg installation, then run from the repository root:
+Install Visual Studio Build Tools with the C++ workload, CMake, vcpkg, and MySQL 8. Set `VCPKG_ROOT` and the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables for your database; do not commit database credentials. Then run from the repository root:
 
 ```powershell
 cmake -S backend -B backend/build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -29,9 +29,9 @@ $env:PORT = "8080"
 .\backend\build\Release\jirani-circle-api.exe
 ```
 
-Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. This does not imply the database-backed API is ready.
+Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. The endpoint returns `503` until it can run a test query against the configured database.
 
-The **Build C++ API** GitHub Actions workflow compiles the current health-only scaffold when backend files change, on pull requests, or when started manually from the Actions tab. The MySQL driver is not enabled yet: vcpkg's Drogon MySQL build selects incompatible system headers on the hosted runner, so database integration needs a separate fix and build check.
+The **Build C++ API** GitHub Actions workflow builds the backend with Drogon's MySQL driver and runs a readiness check against a temporary MySQL 8 service when backend files change, on pull requests, or when started manually from the Actions tab.
 
 ## Publish with GitHub Pages
 

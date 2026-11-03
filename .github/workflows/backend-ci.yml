@@ -19,6 +19,26 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       VCPKG_COMMIT: c653b77e80d1b61e5f5bd2eabf15bc6ec3bfe7ad
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: jirani_circle
+      DB_USER: jirani_ci
+      DB_PASSWORD: ci-only-password
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: jirani_circle
+          MYSQL_USER: jirani_ci
+          MYSQL_PASSWORD: ci-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -27,6 +47,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes autoconf automake build-essential curl libtool ninja-build pkg-config unzip zip
+          sudo apt-get remove --purge --yes default-libmysqlclient-dev libmariadb-dev-compat
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
@@ -51,3 +72,24 @@ jobs:
 
       - name: Build
         run: cmake --build backend/build --parallel 2
+
+      - name: Check API and database readiness
+        run: |
+          ./backend/build/jirani-circle-api > "$RUNNER_TEMP/jirani-circle-api.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/api/v1/health \
+              | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/jirani-circle-api.log"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          cat "$RUNNER_TEMP/jirani-circle-api.log"
+          exit 1

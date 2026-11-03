@@ -23,7 +23,7 @@ paths:
       security: []
       responses:
         '200':
-          description: API process is running.
+          description: API and database are available.
           content:
             application/json:
               schema:
@@ -32,6 +32,17 @@ paths:
                 properties:
                   status:
                     const: ok
+                    type: string
+        '503':
+          description: Database is unavailable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: unavailable
                     type: string
 
   /auth/login:
