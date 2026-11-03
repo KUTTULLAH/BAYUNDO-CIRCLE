@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('backend/vcpkg.json') }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('backend/vcpkg.json', 'backend/vcpkg-overlay-ports/drogon/**') }}
 
       - name: Set up vcpkg
         run: |
@@ -67,7 +67,7 @@ jobs:
         run: >-
           cmake -S backend -B backend/build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="${{ github.workspace }}/backend/cmake/vcpkg-chainload.cmake"
+          -DVCPKG_OVERLAY_PORTS="${{ github.workspace }}/backend/vcpkg-overlay-ports"
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build

@@ -24,7 +24,7 @@ Install Visual Studio Build Tools with the C++ workload, CMake, vcpkg, and MySQL
 
 ```powershell
 cmake -S backend -B backend/build `
-  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$PWD/backend/cmake/vcpkg-chainload.cmake" `
+  -DVCPKG_OVERLAY_PORTS="$PWD/backend/vcpkg-overlay-ports" `
   -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 cmake --build backend/build --config Release
 $env:PORT = "8080"
