@@ -6,8 +6,32 @@ A static, responsive chama dashboard prototype.
 
 - Member and contribution records are sample data stored only in browser memory.
 - Adding a member or contribution changes the current page only; data is not saved.
-- Login, member privacy controls, an API, a database, reports, and M-Pesa STK Push are not implemented.
+- Login, member privacy controls, the database-backed API, reports, and M-Pesa STK Push are not implemented.
 - Do not enter real member or payment information.
+
+## Backend foundation
+
+- `backend/src/main.cc` is the first Drogon server scaffold. It currently implements only `GET /api/v1/health`; member and contribution endpoints are not implemented yet.
+- [`backend/schema.sql`](./backend/schema.sql) is a draft MySQL schema for chama members, individually effective-dated monthly targets, invitations, sessions, financial transactions, access requests, and audit events.
+- [`backend/openapi.yaml`](./backend/openapi.yaml) is the API contract. Members read their own records; an admin can approve one read-only retrieval of another member's records for a requested date range.
+- Member accounts use phone-number sign-in and one-time activation invitations. Members set their own passwords; SMS/WhatsApp delivery still needs a provider.
+- The initial design supports one chama membership per account and KES. A secure one-time bootstrap command must create the first chama and administrator before member invitations can be issued. Public admin signup is not part of the design.
+- The schema has not been run against MySQL, and the API contract has not been run through an OpenAPI validator.
+
+### Build the API on Windows
+
+Install Visual Studio Build Tools with the C++ workload, CMake, and vcpkg. Set `VCPKG_ROOT` to your vcpkg installation, then run from the repository root:
+
+```powershell
+cmake -S backend -B backend/build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+cmake --build backend/build --config Release
+$env:PORT = "8080"
+.\backend\build\Release\jirani-circle-api.exe
+```
+
+Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. This does not imply the database-backed API is ready.
+
+The **Build C++ API** GitHub Actions workflow compiles the backend when backend files change, on pull requests, or when started manually from the Actions tab.
 
 ## Publish with GitHub Pages
 

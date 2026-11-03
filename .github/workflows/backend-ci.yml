@@ -1,0 +1,53 @@
+name: Build C++ API
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      VCPKG_COMMIT: c653b77e80d1b61e5f5bd2eabf15bc6ec3bfe7ad
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes autoconf automake build-essential curl libtool ninja-build pkg-config unzip zip
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg/archives
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('backend/vcpkg.json') }}
+
+      - name: Set up vcpkg
+        run: |
+          git init "$RUNNER_TEMP/vcpkg"
+          git -C "$RUNNER_TEMP/vcpkg" remote add origin https://github.com/microsoft/vcpkg.git
+          git -C "$RUNNER_TEMP/vcpkg" fetch --depth 1 origin "$VCPKG_COMMIT"
+          git -C "$RUNNER_TEMP/vcpkg" checkout --detach FETCH_HEAD
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: >-
+          cmake -S backend -B backend/build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build backend/build --parallel 2

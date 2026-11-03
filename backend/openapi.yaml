@@ -1,0 +1,947 @@
+openapi: 3.1.0
+info:
+  title: Jirani Circle API
+  version: 0.1.0
+  description: |
+    Framework-neutral contract for the first chama-management backend.
+    All endpoints are scoped to the signed-in member's chama. Members can
+    read only their own records unless an admin approves a one-time,
+    read-only request for a specific member and date range.
+servers:
+  - url: https://api.example.invalid/api/v1
+    description: Placeholder; set to the deployed API origin.
+tags:
+  - name: Authentication
+  - name: Member
+  - name: Admin
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: API process is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ok
+                    type: string
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password]
+              properties:
+                phone:
+                  type: string
+                  description: E.164 phone number associated with the invitation.
+                  pattern: '^\+[1-9][0-9]{7,14}$'
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+      responses:
+        '200':
+          description: Authenticated; token is opaque and returned only to this client.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, tokenType, expiresAt, member]
+                properties:
+                  accessToken:
+                    type: string
+                  tokenType:
+                    const: Bearer
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  member:
+                    $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/accept-invite:
+    post:
+      tags: [Authentication]
+      operationId: acceptMemberInvitation
+      security: []
+      description: |
+        Redeems an invitation token once, sets the member's initial password,
+        and activates the account in one transaction. Store only a hash of the
+        high-entropy invitation token. The invitation expires after 24 hours.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 256
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+      responses:
+        '204':
+          description: Invitation redeemed and account activated.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Invitation has already been consumed or revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: Invitation has expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/password-reset:
+    post:
+      tags: [Authentication]
+      operationId: requestPasswordReset
+      security: []
+      description: |
+        Queue a reset link via the configured provider. Always return the same
+        response whether or not a matching account exists to prevent account
+        enumeration. Rate-limit by IP and phone number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  pattern: '^\+[1-9][0-9]{7,14}$'
+      responses:
+        '202':
+          description: If eligible, a password-reset link has been queued.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/password-reset/confirm:
+    post:
+      tags: [Authentication]
+      operationId: confirmPasswordReset
+      security: []
+      description: Consumes a single-use reset token and revokes all existing sessions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 256
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+      responses:
+        '204':
+          description: Password updated; existing sessions revoked.
+        '409':
+          description: Reset token has already been consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: Reset token has expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      responses:
+        '204':
+          description: Current session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me:
+    get:
+      tags: [Member]
+      operationId: getCurrentMember
+      responses:
+        '200':
+          description: Signed-in member and chama context.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [member, chama]
+                properties:
+                  member:
+                    $ref: '#/components/schemas/Member'
+                  chama:
+                    $ref: '#/components/schemas/Chama'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me/summary:
+    get:
+      tags: [Member]
+      operationId: getMySummary
+      description: Returns only the authenticated member's own totals and target.
+      responses:
+        '200':
+          description: Current member's contribution summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me/contributions:
+    get:
+      tags: [Member]
+      operationId: listMyContributions
+      description: The server derives the member ID from the session; clients cannot select another member.
+      parameters:
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ThroughDate'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Signed-in member's posted contribution records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/access-requests:
+    get:
+      tags: [Member]
+      operationId: listMyAccessRequests
+      description: Lists only requests created by the signed-in member.
+      responses:
+        '200':
+          description: Access requests belonging to the signed-in member.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccessRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Member]
+      operationId: requestOtherMemberRecords
+      description: |
+        Requests read-only access to one other member's contribution records
+        over an explicit date range. The requester cannot approve their own
+        request. The date range may not exceed one year. Approval permits one
+        successful, complete retrieval only; do not paginate this response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetMemberId, from, through, reason]
+              properties:
+                targetMemberId:
+                  type: string
+                  format: uuid
+                from:
+                  type: string
+                  format: date
+                through:
+                  type: string
+                  format: date
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '201':
+          description: Request queued for admin review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/access-requests/{requestId}/records:
+    get:
+      tags: [Member]
+      operationId: consumeApprovedRecordAccess
+      description: |
+        Returns only the approved member and date range. Access is one-time:
+        atomically mark the approval consumed, audit the read, and only then
+        return the records. Replays and concurrent second reads are rejected.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: All approved records returned in one response; access is consumed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [memberId, from, through, items]
+                properties:
+                  memberId:
+                    type: string
+                    format: uuid
+                  from:
+                    type: string
+                    format: date
+                  through:
+                    type: string
+                    format: date
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Request is pending, denied, or already consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/summary:
+    get:
+      tags: [Admin]
+      operationId: getGroupSummary
+      description: Admin-only totals. Net balance includes posted inflows minus posted outflows.
+      responses:
+        '200':
+          description: Group totals and collection progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/members:
+    get:
+      tags: [Admin]
+      operationId: listMembers
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Members in the admin's chama, with their own-month payment status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemberPaymentStatus'
+                  nextCursor:
+                    type: [string, 'null']
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Admin]
+      operationId: createMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName, phone, monthlyTarget]
+              properties:
+                fullName:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                phone:
+                  type: string
+                  description: E.164 phone number.
+                  pattern: '^\+[1-9][0-9]{7,14}$'
+                monthlyTarget:
+                  $ref: '#/components/schemas/Money'
+                targetEffectiveFrom:
+                  type: string
+                  format: date
+                  description: First day of the effective month; defaults to the current month.
+      responses:
+        '201':
+          description: |
+            Member and invited account created with a unique chama-scoped
+            member code. A 24-hour activation invitation is queued via the
+            configured SMS/WhatsApp provider. Never return the raw invite token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberPaymentStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/members/{memberId}/invitation:
+    post:
+      tags: [Admin]
+      operationId: resendMemberInvitation
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '202':
+          description: Previous unused invitations revoked; a new invitation queued.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Member account is already active or disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/members/{memberId}:
+    patch:
+      tags: [Admin]
+      operationId: updateMember
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                fullName:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                status:
+                  type: string
+                  enum: [active, inactive]
+                monthlyTarget:
+                  $ref: '#/components/schemas/Money'
+                targetEffectiveFrom:
+                  type: string
+                  format: date
+                  description: Required when changing the monthly target; must be first day of a month.
+      responses:
+        '200':
+          description: Updated member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberPaymentStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/contributions:
+    get:
+      tags: [Admin]
+      operationId: listGroupContributions
+      parameters:
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ThroughDate'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Contributions for this chama; admin-only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Admin]
+      operationId: recordContribution
+      description: Records a manual contribution. STK Push initiation is a later API phase.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId, amount, paymentMethod, occurredAt]
+              properties:
+                memberId:
+                  type: string
+                  format: uuid
+                amount:
+                  $ref: '#/components/schemas/Money'
+                paymentMethod:
+                  type: string
+                  enum: [mpesa, bank_transfer, cash, other]
+                paymentReference:
+                  type: [string, 'null']
+                  maxLength: 80
+                occurredAt:
+                  type: string
+                  format: date-time
+                description:
+                  type: [string, 'null']
+                  maxLength: 255
+      responses:
+        '201':
+          description: Contribution recorded as posted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/access-requests:
+    get:
+      tags: [Admin]
+      operationId: listAccessRequests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, denied]
+            default: pending
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Access requests for admin review.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccessRequest'
+                  nextCursor:
+                    type: [string, 'null']
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/access-requests/{requestId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideAccessRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, deny]
+      responses:
+        '200':
+          description: Request decision recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque session token
+  parameters:
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FromDate:
+      name: from
+      in: query
+      schema:
+        type: string
+        format: date
+    ThroughDate:
+      name: through
+      in: query
+      schema:
+        type: string
+        format: date
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        maxLength: 512
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          pattern: '^(0|[1-9][0-9]*)(\.[0-9]{1,2})?$'
+          description: Decimal amount as a string; never use floating-point arithmetic for money.
+        currency:
+          const: KES
+          type: string
+    Chama:
+      type: object
+      required: [id, name, currency, timeZone]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          const: KES
+          type: string
+        timeZone:
+          type: string
+    Member:
+      type: object
+      required: [id, memberCode, fullName, phone, role, status, accountStatus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberCode:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [admin, member]
+        status:
+          type: string
+          enum: [active, inactive]
+        accountStatus:
+          type: string
+          enum: [invited, active, disabled]
+    MemberSummary:
+      type: object
+      required: [currency, contributedThisMonth, monthlyTarget, outstandingThisMonth]
+      properties:
+        currency:
+          const: KES
+          type: string
+        contributedThisMonth:
+          $ref: '#/components/schemas/Money'
+        monthlyTarget:
+          $ref: '#/components/schemas/Money'
+        outstandingThisMonth:
+          $ref: '#/components/schemas/Money'
+        paymentStatus:
+          type: string
+          enum: [paid, partial, unpaid, inactive]
+    MemberPaymentStatus:
+      allOf:
+        - $ref: '#/components/schemas/Member'
+        - type: object
+          required: [monthlyTarget, contributedThisMonth, outstandingThisMonth, paymentStatus]
+          properties:
+            monthlyTarget:
+              $ref: '#/components/schemas/Money'
+            contributedThisMonth:
+              $ref: '#/components/schemas/Money'
+            outstandingThisMonth:
+              $ref: '#/components/schemas/Money'
+            paymentStatus:
+              type: string
+              enum: [paid, partial, unpaid, inactive]
+    Transaction:
+      type: object
+      required: [id, memberId, kind, direction, status, amount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [contribution, disbursement, expense, adjustment]
+        direction:
+          type: string
+          enum: [inflow, outflow]
+        status:
+          type: string
+          enum: [pending, posted, failed, void]
+        amount:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: [string, 'null']
+          enum: [mpesa, bank_transfer, cash, other, null]
+        paymentReference:
+          type: [string, 'null']
+        occurredAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    TransactionPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        nextCursor:
+          type: [string, 'null']
+    GroupSummary:
+      type: object
+      required: [currency, postedInflows, postedOutflows, netBalance, activeMembers, membersPaid, membersWithBalanceDue]
+      properties:
+        currency:
+          const: KES
+          type: string
+        postedInflows:
+          $ref: '#/components/schemas/Money'
+        postedOutflows:
+          $ref: '#/components/schemas/Money'
+        netBalance:
+          $ref: '#/components/schemas/Money'
+        activeMembers:
+          type: integer
+          minimum: 0
+        membersPaid:
+          type: integer
+          minimum: 0
+        membersWithBalanceDue:
+          type: integer
+          minimum: 0
+    AccessRequest:
+      type: object
+      required: [id, requesterMemberId, targetMemberId, from, through, reason, status, requestedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        requesterMemberId:
+          type: string
+          format: uuid
+        targetMemberId:
+          type: string
+          format: uuid
+        from:
+          type: string
+          format: date
+        through:
+          type: string
+          format: date
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, denied]
+        requestedAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: [string, 'null']
+          format: date-time
+        consumedAt:
+          type: [string, 'null']
+          format: date-time
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+    BadRequest:
+      description: Malformed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, expired, or invalid authentication.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Authenticated user lacks the required role or record access.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found in the caller's chama.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Duplicate or incompatible state transition.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Request values failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Too many login attempts.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
