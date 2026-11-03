@@ -121,6 +121,7 @@ int main()
                     (*responseCallback)(healthResponse(true));
                 },
                 [responseCallback](const drogon::orm::DrogonDbException &) {
+                    LOG_ERROR << "Database health check failed.";
                     (*responseCallback)(healthResponse(false));
                 });
         },

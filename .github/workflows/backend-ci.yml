@@ -47,7 +47,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes autoconf automake build-essential curl libtool ninja-build pkg-config unzip zip
-          sudo apt-get remove --purge --yes default-libmysqlclient-dev libmariadb-dev-compat
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
@@ -68,6 +67,7 @@ jobs:
         run: >-
           cmake -S backend -B backend/build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="${{ github.workspace }}/backend/cmake/vcpkg-chainload.cmake"
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build

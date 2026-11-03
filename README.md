@@ -23,7 +23,9 @@ A static, responsive chama dashboard prototype.
 Install Visual Studio Build Tools with the C++ workload, CMake, vcpkg, and MySQL 8. Set `VCPKG_ROOT` and the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables for your database; do not commit database credentials. Then run from the repository root:
 
 ```powershell
-cmake -S backend -B backend/build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+cmake -S backend -B backend/build `
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$PWD/backend/cmake/vcpkg-chainload.cmake" `
+  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 cmake --build backend/build --config Release
 $env:PORT = "8080"
 .\backend\build\Release\jirani-circle-api.exe
