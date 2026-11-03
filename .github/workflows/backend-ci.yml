@@ -47,7 +47,7 @@ jobs:
       - name: Install build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes autoconf automake build-essential curl default-mysql-client libtool ninja-build pkg-config unzip zip
+          sudo apt-get install --yes autoconf autoconf-archive automake build-essential curl default-mysql-client libtool ninja-build pkg-config unzip zip
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
