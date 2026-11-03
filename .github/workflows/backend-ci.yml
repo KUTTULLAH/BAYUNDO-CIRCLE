@@ -79,6 +79,33 @@ jobs:
           MYSQL_PWD: ${{ env.MYSQL_ROOT_PASSWORD }}
         run: mysql --host="$DB_HOST" --port="$DB_PORT" --user=root < backend/schema.sql
 
+      - name: Verify one-time administrator bootstrap
+        run: |
+          printf '%s\n' \
+            'Jirani Circle CI' \
+            'CI Administrator' \
+            '+254712345678' \
+            'ci-only-bootstrap-password' \
+            | ./backend/build/jirani-circle-bootstrap-admin
+
+          if second_bootstrap_output=$(printf '%s\n' \
+            'Second Chama' \
+            'Second Administrator' \
+            '+254712345679' \
+            'ci-only-bootstrap-password' \
+            | ./backend/build/jirani-circle-bootstrap-admin 2>&1); then
+            echo "Bootstrap unexpectedly allowed a second administrator."
+            exit 1
+          fi
+          printf '%s' "$second_bootstrap_output" \
+            | grep -q "An administrator already exists; bootstrap is disabled."
+
+          admin_count=$(MYSQL_PWD="$DB_PASSWORD" mysql \
+            --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" \
+            --database="$DB_NAME" --batch --skip-column-names \
+            --execute="SELECT COUNT(*) FROM members m JOIN users u ON u.id = m.user_id WHERE m.role = 'admin' AND m.chama_id = (SELECT id FROM chamas WHERE name = 'Jirani Circle CI') AND u.status = 'active' AND u.password_hash LIKE CONCAT(CHAR(36), 'argon2id', CHAR(36), '%')")
+          test "$admin_count" = "1"
+
       - name: Check API and database readiness
         run: |
           ./backend/build/jirani-circle-api > "$RUNNER_TEMP/jirani-circle-api.log" 2>&1 &

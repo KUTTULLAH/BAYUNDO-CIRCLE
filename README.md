@@ -16,7 +16,8 @@ A static, responsive chama dashboard prototype.
 - [`backend/openapi.yaml`](./backend/openapi.yaml) is the API contract. Members read their own records; an admin can approve one read-only retrieval of another member's records for a requested date range.
 - Member accounts use phone-number sign-in and one-time activation invitations. Members set their own passwords; SMS/WhatsApp delivery still needs a provider.
 - The initial design supports one chama membership per account and KES. A secure one-time bootstrap command must create the first chama and administrator before member invitations can be issued. Public admin signup is not part of the design.
-- The schema has not been run against MySQL, and the API contract has not been run through an OpenAPI validator.
+- `backend/build/jirani-circle-bootstrap-admin` creates the initial chama and administrator only when no administrator exists. It prompts for the chama name, admin name, E.164 phone, and a hidden password; it stores an Argon2id password hash and writes an audit event. Run it once from a trusted terminal after applying the schema. It uses the same `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables as the API.
+- CI applies the schema to MySQL 8 and verifies the API's database readiness. The API contract has not yet been run through an OpenAPI validator.
 
 ### Build the API on Windows
 
@@ -27,6 +28,7 @@ cmake -S backend -B backend/build `
   -DVCPKG_OVERLAY_PORTS="$PWD/backend/vcpkg-overlay-ports" `
   -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 cmake --build backend/build --config Release
+.\backend\build\Release\jirani-circle-bootstrap-admin.exe
 $env:PORT = "8080"
 .\backend\build\Release\jirani-circle-api.exe
 ```

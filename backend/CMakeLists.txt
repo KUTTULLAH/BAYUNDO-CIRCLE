@@ -7,9 +7,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Drogon CONFIG REQUIRED)
+find_package(unofficial-sodium CONFIG REQUIRED)
 
 add_executable(jirani-circle-api
   src/main.cc
 )
 
 target_link_libraries(jirani-circle-api PRIVATE Drogon::Drogon)
+
+add_executable(jirani-circle-bootstrap-admin
+  src/bootstrap_admin.cc
+)
+
+target_link_libraries(jirani-circle-bootstrap-admin
+  PRIVATE
+    Drogon::Drogon
+    unofficial-sodium::sodium
+)
