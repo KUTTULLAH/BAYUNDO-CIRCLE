@@ -1,0 +1,15 @@
+diff --git a/cmake/templates/DrogonConfig.cmake.in b/cmake/templates/DrogonConfig.cmake.in
+index a21122a..7e8a4c1 100644
+--- a/cmake/templates/DrogonConfig.cmake.in
++++ b/cmake/templates/DrogonConfig.cmake.in
+@@ -24,8 +24,8 @@ find_dependency(ZLIB REQUIRED)
+ if(@SQLite3_FOUND@)
+ find_dependency(SQLite3)
+ endif()
+-if(@MySQL_FOUND@)
+-find_dependency(MySQL)
++if(@DROGON_FOUND_MYSQL@)
++find_dependency(unofficial-libmariadb CONFIG REQUIRED)
+ endif()
+ if(@Brotli_FOUND@)
+ find_dependency(Brotli)

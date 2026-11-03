@@ -22,6 +22,7 @@ vcpkg_from_github(
         "${VCPKG_UPSTREAM_DROGON_PORT}/0003-deps-redis.patch"
         "${VCPKG_UPSTREAM_DROGON_PORT}/0004-drogon-ctl.patch"
         "${VCPKG_UPSTREAM_DROGON_PORT}/0005-jsoncpp-static.patch"
+        "${CMAKE_CURRENT_LIST_DIR}/0006-mariadb-config.patch"
 )
 
 vcpkg_check_features(
