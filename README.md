@@ -31,7 +31,7 @@ $env:PORT = "8080"
 
 Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. This does not imply the database-backed API is ready.
 
-The **Build C++ API** GitHub Actions workflow compiles the backend when backend files change, on pull requests, or when started manually from the Actions tab.
+The **Build C++ API** GitHub Actions workflow compiles the current health-only scaffold when backend files change, on pull requests, or when started manually from the Actions tab. The MySQL driver is not enabled yet: vcpkg's Drogon MySQL build selects incompatible system headers on the hosted runner, so database integration needs a separate fix and build check.
 
 ## Publish with GitHub Pages
 
