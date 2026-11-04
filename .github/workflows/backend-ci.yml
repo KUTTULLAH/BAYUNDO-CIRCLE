@@ -40,6 +40,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
+          --default-authentication-plugin=mysql_native_password
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
           --health-timeout=5s
@@ -83,6 +84,15 @@ jobs:
           MYSQL_PWD: ${{ env.MYSQL_ROOT_PASSWORD }}
         run: mysql --host="$DB_HOST" --port="$DB_PORT" --user=root < backend/schema.sql
 
+      - name: Verify application database connection
+        env:
+          MYSQL_PWD: ${{ env.DB_PASSWORD }}
+        run: |
+          mysql --connect-timeout=5 --host="$DB_HOST" --port="$DB_PORT" \
+            --user="$DB_USER" --database="$DB_NAME" \
+            --batch --skip-column-names --execute="SELECT 1" \
+            | grep -qx "1"
+
       - name: Verify one-time administrator bootstrap
         run: |
           printf '%s\n' \
@@ -90,14 +100,16 @@ jobs:
             'CI Administrator' \
             '+254712345678' \
             'ci-only-bootstrap-password' \
-            | ./backend/build/jirani-circle-bootstrap-admin
+            | timeout --signal=TERM --kill-after=10s 90s \
+                ./backend/build/jirani-circle-bootstrap-admin
 
           if second_bootstrap_output=$(printf '%s\n' \
             'Second Chama' \
             'Second Administrator' \
             '+254712345679' \
             'ci-only-bootstrap-password' \
-            | ./backend/build/jirani-circle-bootstrap-admin 2>&1); then
+            | timeout --signal=TERM --kill-after=10s 30s \
+                ./backend/build/jirani-circle-bootstrap-admin 2>&1); then
             echo "Bootstrap unexpectedly allowed a second administrator."
             exit 1
           fi
