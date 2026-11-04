@@ -254,8 +254,11 @@ int main()
         {
             return EXIT_FAILURE;
         }
-        drogon::app().addDbClient(databaseConfig);
-        const auto client = drogon::app().getDbClient();
+        const auto client = drogon::orm::DbClient::newMysqlClient(
+            jirani::databaseConnectionInfo(databaseConfig),
+            databaseConfig.connectionNumber);
+        client->setTimeout(databaseConfig.timeout);
+        client->setReconnectInterval(databaseConfig.reconnectInterval);
         createInitialAdmin(client,
                            chamaName,
                            fullName,
