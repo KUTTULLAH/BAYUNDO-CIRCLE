@@ -11,9 +11,10 @@ find_package(unofficial-sodium CONFIG REQUIRED)
 
 add_executable(jirani-circle-api
   src/main.cc
+  src/api_routes.cc
 )
 
-target_link_libraries(jirani-circle-api PRIVATE Drogon::Drogon)
+target_link_libraries(jirani-circle-api PRIVATE Drogon::Drogon unofficial-sodium::sodium)
 
 add_executable(jirani-circle-bootstrap-admin
   src/bootstrap_admin.cc

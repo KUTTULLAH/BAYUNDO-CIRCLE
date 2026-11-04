@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "backend/**"
+      - "index.html"
+      - "README.md"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "backend/**"
+      - "index.html"
+      - "README.md"
       - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 
@@ -126,3 +130,13 @@ jobs:
 
           cat "$RUNNER_TEMP/jirani-circle-api.log"
           exit 1
+
+      - name: Verify immediate member activation lifecycle
+        run: |
+          ./backend/build/jirani-circle-api > "$RUNNER_TEMP/jirani-circle-api-lifecycle.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          if ! python3 backend/tests/member_lifecycle_ci.py; then
+            cat "$RUNNER_TEMP/jirani-circle-api-lifecycle.log"
+            exit 1
+          fi

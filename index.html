@@ -66,6 +66,7 @@
     .heading-copy { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
     .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 680; white-space: nowrap; }
     .button:hover { border-color: #b6c8bb; background: #fafcf9; }
+    .button:disabled { cursor: not-allowed; opacity: .5; }
     .button-primary { border-color: var(--green); background: var(--green); color: white; }
     .button-primary:hover { border-color: var(--green-dark); background: var(--green-dark); }
     .button-icon { font-size: 15px; line-height: 1; }
@@ -151,6 +152,7 @@
     .toast { position: fixed; z-index: 12; right: 20px; bottom: 20px; max-width: min(360px, calc(100vw - 40px)); padding: 12px 16px; border: 1px solid #cfe2d4; border-radius: 8px; background: #f1faf3; color: var(--green-dark); box-shadow: var(--shadow); font-size: 11px; }
     .toast[hidden] { display: none; }
     .empty-state { padding: 24px; color: var(--muted); font-size: 11px; text-align: center; }
+    .chart .empty-state { grid-column: 1 / -1; align-self: center; }
     .mobile-brand, .mobile-toggle { display: none; }
 
     @media (max-width: 1050px) {
@@ -224,13 +226,13 @@
         <button class="mobile-toggle" id="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
         <div class="mobile-brand"><span class="brand-mark" aria-hidden="true">J</span>Jirani Circle</div>
         <div class="crumb">Workspace <span aria-hidden="true">/</span> <strong>Overview</strong></div>
-        <div class="top-actions"><span class="date-label" id="today-label"></span><button class="button" id="export-button" type="button"><span class="button-icon" aria-hidden="true">↓</span><span class="hide-mobile">Export</span></button></div>
+        <div class="top-actions"><span class="date-label" id="today-label"></span><button class="button" id="backend-connect" type="button">Connect backend</button><button class="button" id="export-button" type="button"><span class="button-icon" aria-hidden="true">↓</span><span class="hide-mobile">Export</span></button></div>
       </header>
 
       <div class="page">
         <div class="demo-notice" role="note">
           <span aria-hidden="true">ⓘ</span>
-          <p><strong>Prototype with sample data.</strong> Changes are held in this page only and are not saved to a server or database. No accounts or real member records are connected yet.</p>
+          <p><strong>Prototype only.</strong> <span id="storage-message">Members and contributions are saved only in this browser on this device. They are not synced or securely backed up.</span></p>
         </div>
 
         <section aria-labelledby="page-title">
@@ -282,11 +284,11 @@
 
         <section class="panel table-panel" id="members" aria-labelledby="members-title">
           <div class="panel-header">
-            <div><h2 class="panel-title" id="members-title">Member contributions</h2><p class="panel-subtitle">A quick look at this month's member payments</p></div>
+            <div><h2 class="panel-title" id="members-title">Members</h2><p class="panel-subtitle">Add and manage your chama members</p></div>
             <div class="table-toolbar"><input class="search" id="member-search" type="search" placeholder="Search members..." aria-label="Search members"><button class="button" id="add-member" type="button"><span class="button-icon" aria-hidden="true">+</span><span class="hide-mobile">Add member</span></button></div>
           </div>
           <div class="table-scroll"><table>
-            <thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Monthly target</th><th scope="col">Last payment</th><th scope="col">Status</th></tr></thead>
+            <thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Monthly target</th><th scope="col">Last payment</th><th scope="col">Payment status</th><th scope="col">Membership</th></tr></thead>
             <tbody id="member-rows"></tbody>
           </table></div>
           <div class="table-foot"><span id="member-count-label">Showing 0 members</span><button class="link-button" id="clear-search" type="button">Clear search</button></div>
@@ -298,7 +300,7 @@
             <thead><tr><th scope="col">Member</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Reference</th><th scope="col">Amount</th></tr></thead>
             <tbody id="transaction-rows"></tbody>
           </table></div>
-          <div class="table-foot"><span id="transaction-count-label">Showing 0 contributions</span><span>Sample data</span></div>
+          <div class="table-foot"><span id="transaction-count-label">Showing 0 contributions</span><span id="contribution-storage-note">Browser-only entries</span></div>
         </section>
       </div>
     </main>
@@ -318,21 +320,13 @@
   <script>
     (() => {
       const monthlyTarget = 5000;
-      const members = [
-        { id: 'JC-001', name: 'Wanjiku Njeri', phone: '0712 345 678', status: 'Active' },
-        { id: 'JC-002', name: 'Brian Otieno', phone: '0723 456 789', status: 'Active' },
-        { id: 'JC-003', name: 'Amina Hassan', phone: '0734 567 890', status: 'Active' },
-        { id: 'JC-004', name: 'Peter Mwangi', phone: '0745 678 901', status: 'Active' },
-        { id: 'JC-005', name: 'Grace Wambui', phone: '0756 789 012', status: 'Active' },
-        { id: 'JC-006', name: 'David Kiptoo', phone: '0767 890 123', status: 'Active' }
-      ];
-      const contributions = [
-        { id: 'JC-001', name: 'Wanjiku Njeri', amount: 5000, date: '2026-11-02', method: 'M-Pesa', reference: 'QMK7A2P1' },
-        { id: 'JC-002', name: 'Brian Otieno', amount: 3000, date: '2026-11-02', method: 'Bank transfer', reference: 'BK-882104' },
-        { id: 'JC-003', name: 'Amina Hassan', amount: 5000, date: '2026-11-01', method: 'M-Pesa', reference: 'QML2C5D8' },
-        { id: 'JC-004', name: 'Peter Mwangi', amount: 2000, date: '2026-10-30', method: 'Cash', reference: 'CSH-0142' },
-        { id: 'JC-005', name: 'Grace Wambui', amount: 5000, date: '2026-10-29', method: 'M-Pesa', reference: 'QMK8E3W2' }
-      ];
+      let members = [];
+      const localMembers = [];
+      const contributions = [];
+      const storageKey = 'jirani-circle-dashboard-v1';
+      let storageReady = true;
+      let apiSession = null;
+      let apiBaseUrl = '';
       const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
       const formatMoney = (amount) => `KES ${money.format(amount)}`;
       const initials = (name) => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
@@ -340,63 +334,164 @@
       const today = new Date();
       const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-      const currentMonthEntries = () => contributions.filter((entry) => entry.date.startsWith(monthKey));
+      const currentMonthEntries = () => apiSession ? [] : contributions.filter((entry) => entry.date.startsWith(monthKey));
+      const activeMembers = () => members.filter((member) => member.status === 'Active');
+      const targetFor = (member) => Number.isFinite(member.monthlyTarget) ? member.monthlyTarget : monthlyTarget;
       const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+      const showStorageError = (message) => {
+        storageReady = false;
+        document.querySelector('#storage-message').textContent = message;
+        document.querySelector('#add-member').disabled = true;
+        document.querySelector('#record-top').disabled = true;
+      };
+
+      const validSavedData = (data) => {
+        if (!data || data.version !== 1 || !Array.isArray(data.members) || !Array.isArray(data.contributions)) return false;
+        const memberIds = new Set();
+        const phones = new Set();
+        for (const member of data.members) {
+          if (!member || typeof member.id !== 'string' || !/^JC-\d+$/.test(member.id) ||
+              typeof member.name !== 'string' || !member.name.trim() || member.name.length > 120 ||
+              typeof member.phone !== 'string' || !/^\+[1-9]\d{7,14}$/.test(member.phone) ||
+              (member.monthlyTarget !== undefined && (!Number.isSafeInteger(member.monthlyTarget) || member.monthlyTarget <= 0)) ||
+              member.status !== 'Active' || memberIds.has(member.id) || phones.has(member.phone)) return false;
+          memberIds.add(member.id);
+          phones.add(member.phone);
+        }
+        return data.contributions.every((entry) =>
+          entry && memberIds.has(entry.id) && typeof entry.name === 'string' &&
+          Number.isSafeInteger(entry.amount) && entry.amount > 0 &&
+          typeof entry.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(entry.date) &&
+          ['M-Pesa', 'Bank transfer', 'Cash'].includes(entry.method) &&
+          typeof entry.reference === 'string' && entry.reference.trim().length > 0 &&
+          entry.reference.length <= 40
+        );
+      };
+
+      const loadSavedData = () => {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (saved === null) return;
+          const data = JSON.parse(saved);
+          if (!validSavedData(data)) {
+            showStorageError('Saved browser data could not be verified. Changes are disabled to avoid overwriting it.');
+            return;
+          }
+          localMembers.push(...data.members);
+          members.push(...data.members);
+          contributions.push(...data.contributions);
+        } catch (error) {
+          showStorageError(`Could not load browser data (${error.name}). Changes are disabled to avoid losing saved information.`);
+        }
+      };
+
+      const saveData = () => {
+        if (!storageReady) return false;
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({
+            version: 1,
+            members: localMembers,
+            contributions
+          }));
+          return true;
+        } catch (error) {
+          showStorageError(`Could not save browser data (${error.name}). Further changes are disabled.`);
+          return false;
+        }
+      };
 
       const render = () => {
         const monthEntries = currentMonthEntries();
-        const totals = new Map(members.map((member) => [member.id, 0]));
-        contributions.forEach((entry) => totals.set(entry.id, (totals.get(entry.id) || 0) + entry.amount));
-        const monthTotals = new Map(members.map((member) => [member.id, 0]));
+        const currentMembers = activeMembers();
+        const monthTotals = new Map(currentMembers.map((member) => [member.id, apiSession ? member.contributedAmount : 0]));
         monthEntries.forEach((entry) => monthTotals.set(entry.id, (monthTotals.get(entry.id) || 0) + entry.amount));
-        const paid = members.filter((member) => (monthTotals.get(member.id) || 0) >= monthlyTarget).length;
-        const due = members.filter((member) => member.status === 'Active' && (monthTotals.get(member.id) || 0) < monthlyTarget);
-        const dueAmount = due.reduce((sum, member) => sum + monthlyTarget - (monthTotals.get(member.id) || 0), 0);
+        const paid = currentMembers.filter((member) => apiSession
+          ? member.monthlyTarget > 0 && member.paymentStatus === 'paid'
+          : (monthTotals.get(member.id) || 0) >= targetFor(member)).length;
+        const due = currentMembers.filter((member) => apiSession
+          ? member.monthlyTarget > 0 && ['partial', 'unpaid'].includes(member.paymentStatus)
+          : (monthTotals.get(member.id) || 0) < targetFor(member));
+        const dueAmount = apiSession
+          ? due.reduce((sum, member) => sum + member.outstandingAmount, 0)
+          : due.reduce((sum, member) => sum + targetFor(member) - (monthTotals.get(member.id) || 0), 0);
         const totalSavings = contributions.reduce((sum, entry) => sum + entry.amount, 0);
-        const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
-        document.querySelector('#total-savings').textContent = formatMoney(totalSavings);
-        document.querySelector('#active-members').textContent = members.filter((member) => member.status === 'Active').length;
-        document.querySelector('#collected-month').textContent = formatMoney(monthTotal);
+        const monthTotal = apiSession
+          ? currentMembers.reduce((sum, member) => sum + member.contributedAmount, 0)
+          : monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
+        document.querySelector('#total-savings').textContent = apiSession ? '—' : formatMoney(totalSavings);
+        document.querySelector('#active-members').textContent = currentMembers.length;
+        document.querySelector('#record-top').disabled = currentMembers.length === 0 || !storageReady || apiSession !== null;
+        document.querySelector('#add-member').disabled = !storageReady && !apiSession;
+        document.querySelector('#backend-connect').textContent = apiSession ? 'Disconnect backend' : 'Connect backend';
+        document.querySelector('#contribution-storage-note').textContent = apiSession
+          ? 'Contributions are not connected to the backend'
+          : 'Browser-only entries';
+        document.querySelector('.user-name').textContent = apiSession ? apiSession.fullName : 'Admin Member';
+        document.querySelector('#collected-month').textContent = apiSession ? '—' : formatMoney(monthTotal);
         document.querySelector('#members-due').textContent = due.length;
-        document.querySelector('#due-total').textContent = formatMoney(dueAmount);
-        document.querySelector('#chart-total').textContent = formatMoney(monthTotal);
-        document.querySelector('#collection-progress').textContent = `${paid} of ${members.length}`;
+        document.querySelector('#due-total').textContent = apiSession ? '—' : formatMoney(dueAmount);
+        document.querySelector('#chart-total').textContent = apiSession ? '—' : formatMoney(monthTotal);
+        document.querySelector('#collection-progress').textContent = `${paid} of ${currentMembers.length}`;
         document.querySelector('#paid-count').textContent = `${paid} members`;
         document.querySelector('#due-count').textContent = `${due.length} members`;
-        document.querySelector('#paid-progress').style.width = `${members.length ? paid / members.length * 100 : 0}%`;
-        document.querySelector('#due-progress').style.width = `${members.length ? due.length / members.length * 100 : 0}%`;
+        document.querySelector('#paid-progress').style.width = `${currentMembers.length ? paid / currentMembers.length * 100 : 0}%`;
+        document.querySelector('#due-progress').style.width = `${currentMembers.length ? due.length / currentMembers.length * 100 : 0}%`;
         renderChart(monthEntries);
         renderMembers();
         renderContributions();
       };
 
       const renderChart = (entries) => {
+        if (apiSession) {
+          document.querySelector('#chart').innerHTML = '<div class="empty-state">Daily contribution history is not connected.</div>';
+          return;
+        }
         const days = Array.from({ length: 7 }, (_, index) => {
           const date = new Date();
           date.setDate(date.getDate() - 6 + index);
           const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
           return { key, label: date.toLocaleDateString('en', { weekday: 'short' }), amount: entries.filter((entry) => entry.date === key).reduce((sum, entry) => sum + entry.amount, 0) };
         });
+        if (days.every((day) => day.amount === 0)) {
+          document.querySelector('#chart').innerHTML = '<div class="empty-state">No contributions recorded yet.</div>';
+          return;
+        }
         const max = Math.max(monthlyTarget, ...days.map((day) => day.amount));
         document.querySelector('#chart').innerHTML = days.map((day) => `<div class="chart-column" title="${escapeHtml(day.label)}: ${formatMoney(day.amount)}"><div class="chart-bar-wrap"><div class="chart-bar" style="height:${Math.max(4, day.amount / max * 100)}%"></div></div><span class="chart-label">${escapeHtml(day.label)}</span></div>`).join('');
       };
 
       const renderMembers = () => {
         const query = document.querySelector('#member-search').value.trim().toLowerCase();
-        const monthly = new Map(members.map((member) => [member.id, 0]));
+        const monthly = new Map(activeMembers().map((member) => [member.id, 0]));
         currentMonthEntries().forEach((entry) => monthly.set(entry.id, (monthly.get(entry.id) || 0) + entry.amount));
         const filtered = members.filter((member) => `${member.name} ${member.id} ${member.phone}`.toLowerCase().includes(query));
         const rows = filtered.map((member) => {
-          const amount = monthly.get(member.id) || 0;
+          const amount = apiSession ? member.contributedAmount : (monthly.get(member.id) || 0);
+          const target = targetFor(member);
           const latest = contributions.filter((entry) => entry.id === member.id).sort((a, b) => b.date.localeCompare(a.date))[0];
-          const paid = amount >= monthlyTarget;
-          return `<tr><td><div class="member-cell"><span class="avatar">${escapeHtml(initials(member.name))}</span><span>${escapeHtml(member.name)}<span class="member-id">${escapeHtml(member.id)} · ${escapeHtml(member.phone)}</span></span></div></td><td class="amount">${formatMoney(amount)}</td><td>${formatMoney(monthlyTarget)}</td><td>${latest ? dateText(latest.date) : '—'}</td><td><span class="status ${paid ? 'status-paid' : 'status-due'}">${paid ? 'Paid' : 'Due'}</span></td></tr>`;
+          const paid = apiSession ? member.monthlyTarget > 0 && member.paymentStatus === 'paid' : amount >= target;
+          const statusClass = member.status === 'Active' ? 'status-paid' : 'status-due';
+          const paymentLabel = apiSession && target === 0
+            ? 'No target'
+            : paid ? 'Paid' : member.paymentStatus === 'partial' ? 'Partial' : 'Due';
+          return `<tr><td><div class="member-cell"><span class="avatar">${escapeHtml(initials(member.name))}</span><span>${escapeHtml(member.name)}<span class="member-id">${escapeHtml(member.id)} · ${escapeHtml(member.phone)}</span></span></div></td><td class="amount">${formatMoney(amount)}</td><td>${formatMoney(target)}</td><td>${latest ? dateText(latest.date) : '—'}</td><td><span class="status ${paid ? 'status-paid' : 'status-due'}">${paymentLabel}</span></td><td><span class="status ${statusClass}">${escapeHtml(member.status)}</span></td></tr>`;
         }).join('');
-        document.querySelector('#member-rows').innerHTML = rows || '<tr><td colspan="5"><div class="empty-state">No members match your search.</div></td></tr>';
-        document.querySelector('#member-count-label').textContent = `Showing ${filtered.length} of ${members.length} members`;
+        const emptyMessage = members.length
+          ? 'No members match your search.'
+          : 'No members yet. Select Add member to register your first member.';
+        document.querySelector('#member-rows').innerHTML = rows || `<tr><td colspan="6"><div class="empty-state">${emptyMessage}</div></td></tr>`;
+        document.querySelector('#member-count-label').textContent = members.length
+          ? `Showing ${filtered.length} of ${members.length} members`
+          : 'No members added yet';
       };
 
       const renderContributions = () => {
+        if (apiSession) {
+          document.querySelector('#transaction-rows').innerHTML = '<tr><td colspan="5"><div class="empty-state">Contribution history is not connected to the backend.</div></td></tr>';
+          document.querySelector('#transaction-count-label').textContent = 'Backend contribution history is not loaded';
+          return;
+        }
         const recent = [...contributions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
         document.querySelector('#transaction-rows').innerHTML = recent.length ? recent.map((entry) => `<tr><td><div class="member-cell"><span class="avatar">${escapeHtml(initials(entry.name))}</span><span>${escapeHtml(entry.name)}<span class="member-id">${escapeHtml(entry.id)}</span></span></div></td><td>${dateText(entry.date)}</td><td class="payment-method">${escapeHtml(entry.method)}</td><td>${escapeHtml(entry.reference)}</td><td class="amount">${formatMoney(entry.amount)}</td></tr>`).join('') : '<tr><td colspan="5"><div class="empty-state">No contributions recorded yet.</div></td></tr>';
         document.querySelector('#transaction-count-label').textContent = `Showing ${recent.length} of ${contributions.length} contributions`;
@@ -405,6 +500,8 @@
       const backdrop = document.querySelector('#modal-backdrop');
       const formFields = document.querySelector('#form-fields');
       let modalMode = 'contribution';
+      let modalOpener = null;
+      let invitationDetails = null;
       let toastTimer;
       const showToast = (message) => {
         const toast = document.querySelector('#toast');
@@ -414,17 +511,28 @@
         toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
       };
       const openModal = (mode) => {
+        modalOpener = document.activeElement;
         modalMode = mode;
         const addMember = mode === 'member';
-        document.querySelector('#modal-title').textContent = addMember ? 'Add a member' : 'Record a contribution';
-        document.querySelector('#modal-description').textContent = addMember ? 'Add a member to this sample group.' : 'Enter the payment details below.';
-        document.querySelector('#modal-submit').textContent = addMember ? 'Add member' : 'Save contribution';
-        formFields.innerHTML = addMember
-          ? '<div class="field field-wide"><label for="member-name">Full name</label><input id="member-name" name="name" autocomplete="name" required maxlength="80"></div><div class="field field-wide"><label for="member-phone">Phone number</label><input id="member-phone" name="phone" type="tel" autocomplete="tel" required maxlength="20" placeholder="07XX XXX XXX"></div>'
-          : `<div class="field field-wide"><label for="contribution-member">Member</label><select id="contribution-member" name="member" required>${members.filter((member) => member.status === 'Active').map((member) => `<option value="${escapeHtml(member.id)}">${escapeHtml(member.name)} (${escapeHtml(member.id)})</option>`).join('')}</select></div><div class="field"><label for="contribution-amount">Amount (KES)</label><input id="contribution-amount" name="amount" type="number" min="1" step="1" required></div><div class="field"><label for="contribution-date">Payment date</label><input id="contribution-date" name="date" type="date" value="${todayKey}" required></div><div class="field"><label for="contribution-method">Payment method</label><select id="contribution-method" name="method" required><option>M-Pesa</option><option>Bank transfer</option><option>Cash</option></select></div><div class="field"><label for="contribution-reference">Reference</label><input id="contribution-reference" name="reference" maxlength="40" required></div>`;
+        const connect = mode === 'connect';
+        const invitation = mode === 'invitation';
+        document.querySelector('#modal-title').textContent = connect ? 'Connect to your backend' : invitation ? 'Member invitation' : addMember ? 'Add a member' : 'Record a contribution';
+        document.querySelector('#modal-description').textContent = connect ? 'Serve this dashboard from localhost to connect. Sign in with your administrator account; your password and session token are not saved in this browser.' : invitation ? 'Share this one-time activation token with the member through a trusted channel.' : addMember ? 'Register a member in your group.' : 'Enter the payment details below.';
+        document.querySelector('#modal-submit').textContent = connect ? 'Sign in' : addMember ? 'Add member' : 'Save contribution';
+        document.querySelector('#modal-submit').hidden = invitation;
+        document.querySelector('#modal-cancel').textContent = invitation ? 'Close' : 'Cancel';
+        formFields.innerHTML = invitation
+          ? `<div class="field field-wide"><label for="invitation-token">One-time activation token</label><input id="invitation-token" type="text" value="${escapeHtml(invitationDetails.token)}" readonly><span class="member-id">For ${escapeHtml(invitationDetails.memberName)}. This token expires in 24 hours. The member must accept it and set a password before signing in.</span><button class="button" id="copy-invitation-token" type="button">Copy token</button></div>`
+          : connect
+          ? '<div class="field field-wide"><label for="api-url">Local API URL</label><input id="api-url" name="apiUrl" type="url" required value="http://127.0.0.1:8080/api/v1" autocomplete="url"></div><div class="field field-wide"><label for="admin-phone">Administrator phone</label><input id="admin-phone" name="adminPhone" type="tel" required maxlength="16" placeholder="+254712345678" pattern="\\+[1-9][0-9]{7,14}" autocomplete="username"></div><div class="field field-wide"><label for="admin-password">Password</label><input id="admin-password" name="adminPassword" type="password" required minlength="12" maxlength="128" autocomplete="current-password"></div>'
+          : addMember
+            ? '<div class="field field-wide"><label for="member-name">Full name</label><input id="member-name" name="name" autocomplete="name" required maxlength="120"></div><div class="field field-wide"><label for="member-phone">Phone number</label><input id="member-phone" name="phone" type="tel" autocomplete="tel" required maxlength="16" placeholder="+254712345678" pattern="\\+[1-9][0-9]{7,14}" title="Enter a phone number in international format, for example +254712345678"></div><div class="field field-wide"><label for="member-target">Monthly target (KES)</label><input id="member-target" name="target" type="number" min="1" max="100000000" step="1" value="5000" required></div>'
+            : `<div class="field field-wide"><label for="contribution-member">Member</label><select id="contribution-member" name="member" required>${members.filter((member) => member.status === 'Active').map((member) => `<option value="${escapeHtml(member.id)}">${escapeHtml(member.name)} (${escapeHtml(member.id)})</option>`).join('')}</select></div><div class="field"><label for="contribution-amount">Amount (KES)</label><input id="contribution-amount" name="amount" type="number" min="1" step="1" required></div><div class="field"><label for="contribution-date">Payment date</label><input id="contribution-date" name="date" type="date" value="${todayKey}" required></div><div class="field"><label for="contribution-method">Payment method</label><select id="contribution-method" name="method" required><option>M-Pesa</option><option>Bank transfer</option><option>Cash</option></select></div><div class="field"><label for="contribution-reference">Reference</label><input id="contribution-reference" name="reference" maxlength="40" required></div>`;
         backdrop.classList.add('open');
         backdrop.setAttribute('aria-hidden', 'false');
         document.querySelector('#modal-form').reset();
+        if (invitation) document.querySelector('#invitation-token').value = invitationDetails.token;
+        if (invitation) document.querySelector('#invitation-token').focus();
         const dateInput = document.querySelector('#contribution-date');
         if (dateInput) dateInput.value = todayKey;
         formFields.querySelector('input, select')?.focus();
@@ -432,26 +540,246 @@
       const closeModal = () => {
         backdrop.classList.remove('open');
         backdrop.setAttribute('aria-hidden', 'true');
+        document.querySelector('#modal-form').reset();
+        document.querySelector('#modal-submit').hidden = false;
+        document.querySelector('#modal-cancel').textContent = 'Cancel';
+        if (modalMode === 'invitation') {
+          invitationDetails = null;
+          formFields.replaceChildren();
+        }
+        modalOpener?.focus();
+        modalOpener = null;
+      };
+
+      const normalizeApiBase = (value) => {
+        const url = new URL(value.trim());
+        if (!['http:', 'https:'].includes(url.protocol) ||
+            !['localhost', '127.0.0.1'].includes(url.hostname) ||
+            url.username || url.password || url.search || url.hash ||
+            url.pathname.replace(/\/$/, '') !== '/api/v1') {
+          throw new Error('Use a local API URL ending in /api/v1, such as http://127.0.0.1:8080/api/v1.');
+        }
+        return `${url.origin}/api/v1`;
+      };
+
+      const apiRequest = async (baseUrl, path, { method = 'GET', token = '', body } = {}) => {
+        const headers = { Accept: 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        if (body !== undefined) headers['Content-Type'] = 'application/json';
+        const response = await fetch(`${baseUrl}${path}`, {
+          method,
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body)
+        });
+        const responseText = await response.text();
+        let payload = null;
+        if (responseText) {
+          try {
+            payload = JSON.parse(responseText);
+          } catch {
+            throw new Error(`The API returned an unreadable response (HTTP ${response.status}).`);
+          }
+        }
+        if (!response.ok) {
+          throw new Error(payload?.message || `The API request failed (HTTP ${response.status}).`);
+        }
+        return payload;
+      };
+
+      const amountFromMoney = (value) => {
+        if (!value || value.currency !== 'KES' ||
+            typeof value.amount !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(value.amount)) {
+          throw new Error('The API returned an invalid KES amount.');
+        }
+        return Number(value.amount);
+      };
+
+      const mapApiMember = (item) => {
+        if (!item || typeof item.id !== 'string' || typeof item.fullName !== 'string' ||
+            typeof item.phone !== 'string' || !['active', 'inactive'].includes(item.status) ||
+            !['paid', 'partial', 'unpaid', 'inactive'].includes(item.paymentStatus)) {
+          throw new Error('The API returned an invalid member record.');
+        }
+        const monthlyTarget = amountFromMoney(item.monthlyTarget);
+        return {
+          id: item.id,
+          name: item.fullName,
+          phone: item.phone,
+          status: item.status === 'active' ? 'Active' : 'Inactive',
+          monthlyTarget,
+          contributedAmount: amountFromMoney(item.contributedThisMonth),
+          outstandingAmount: amountFromMoney(item.outstandingThisMonth),
+          paymentStatus: item.paymentStatus
+        };
+      };
+
+      const loadApiMembers = async (baseUrl, token) => {
+        const loaded = [];
+        let cursor = '';
+        const cursors = new Set();
+        do {
+          const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+          const page = await apiRequest(baseUrl, `/admin/members${query}`, { token });
+          if (!page || !Array.isArray(page.items)) throw new Error('The API returned an invalid member list.');
+          loaded.push(...page.items.map(mapApiMember));
+          cursor = typeof page.nextCursor === 'string' ? page.nextCursor : '';
+          if (cursor && cursors.has(cursor)) throw new Error('The API returned a repeated pagination cursor.');
+          if (cursor) cursors.add(cursor);
+        } while (cursor);
+        return loaded;
+      };
+
+      const connectBackend = async (baseUrl, phone, password) => {
+        const login = await apiRequest(baseUrl, '/auth/login', {
+          method: 'POST',
+          body: { phone, password }
+        });
+        if (!login || typeof login.accessToken !== 'string' || !login.accessToken ||
+            !login.member || login.member.role !== 'admin') {
+          if (login && typeof login.accessToken === 'string' && login.accessToken) {
+            try {
+              await apiRequest(baseUrl, '/auth/logout', { method: 'POST', token: login.accessToken });
+            } catch (error) {
+              throw new Error(`Administrator access is required, and the non-admin session could not be revoked (${error.message}).`);
+            }
+          }
+          throw new Error('Sign-in did not return an administrator session.');
+        }
+        let loadedMembers;
+        try {
+          loadedMembers = await loadApiMembers(baseUrl, login.accessToken);
+        } catch (error) {
+          try {
+            await apiRequest(baseUrl, '/auth/logout', { method: 'POST', token: login.accessToken });
+          } catch (logoutError) {
+            throw new Error(`${error.message} The new session could not be revoked (${logoutError.message}); it expires in 24 hours.`);
+          }
+          throw error;
+        }
+        apiBaseUrl = baseUrl;
+        apiSession = {
+          accessToken: login.accessToken,
+          fullName: login.member.fullName
+        };
+        members = loadedMembers;
+        document.querySelector('#storage-message').textContent = 'Member records are loaded from the backend. Contribution entry and history are not connected.';
+        render();
+      };
+
+      const disconnectBackend = async () => {
+        await apiRequest(apiBaseUrl, '/auth/logout', {
+          method: 'POST',
+          token: apiSession.accessToken
+        });
+        apiSession = null;
+        apiBaseUrl = '';
+        members = [...localMembers];
+        document.querySelector('#storage-message').textContent = 'Members and contributions are saved only in this browser on this device. They are not synced or securely backed up.';
+        render();
+      };
+
+      const showInvitationToken = (token, memberName) => {
+        invitationDetails = { token, memberName };
+        openModal('invitation');
       };
 
       document.querySelector('#record-top').addEventListener('click', () => openModal('contribution'));
       document.querySelector('#add-member').addEventListener('click', () => openModal('member'));
+      document.querySelector('#backend-connect').addEventListener('click', async () => {
+        if (!apiSession) {
+          openModal('connect');
+          return;
+        }
+        try {
+          await disconnectBackend();
+          showToast('Disconnected from the backend.');
+        } catch (error) {
+          showToast(`Could not disconnect: ${error.message}`);
+        }
+      });
       document.querySelector('#modal-close').addEventListener('click', closeModal);
       document.querySelector('#modal-cancel').addEventListener('click', closeModal);
       backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
       document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && backdrop.classList.contains('open')) closeModal(); });
-      document.querySelector('#modal-form').addEventListener('submit', (event) => {
+      formFields.addEventListener('click', async (event) => {
+        if (event.target.id !== 'copy-invitation-token' || !invitationDetails) return;
+        try {
+          await navigator.clipboard.writeText(invitationDetails.token);
+          showToast('Invitation token copied. Share it through a trusted channel.');
+        } catch {
+          showToast('Copy was blocked. Select the token and copy it manually.');
+        }
+      });
+      document.querySelector('#modal-form').addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (modalMode === 'invitation') return;
+        if (!storageReady && !apiSession && modalMode !== 'connect') {
+          showToast('Browser storage is unavailable. Changes cannot be saved.');
+          return;
+        }
         const values = new FormData(event.currentTarget);
+        if (modalMode === 'connect') {
+          const passwordInput = document.querySelector('#admin-password');
+          const password = String(values.get('adminPassword'));
+          try {
+            const baseUrl = normalizeApiBase(String(values.get('apiUrl')));
+            await connectBackend(baseUrl, String(values.get('adminPhone')).trim(), password);
+            closeModal();
+            showToast('Connected. Member records are loaded from the backend.');
+          } catch (error) {
+            passwordInput.value = '';
+            showToast(`Could not connect: ${error.message}`);
+          }
+          return;
+        }
         if (modalMode === 'member') {
           const name = String(values.get('name')).trim();
           const phone = String(values.get('phone')).trim();
-          if (!name || !phone) return;
+          const target = Number(values.get('target'));
+          if (!name || !phone || !Number.isSafeInteger(target) || target <= 0 || target > 100000000) return;
+          if (!apiSession && members.some((member) => member.phone === phone)) {
+            showToast('A member with this phone number is already registered.');
+            return;
+          }
+          if (apiSession) {
+            try {
+              const result = await apiRequest(apiBaseUrl, '/admin/members', {
+                method: 'POST',
+                token: apiSession.accessToken,
+                body: {
+                  fullName: name,
+                  phone,
+                  monthlyTarget: { amount: `${target}.00`, currency: 'KES' }
+                }
+              });
+              if (!result || !result.member || typeof result.invitationToken !== 'string' || !result.invitationToken) {
+                members = await loadApiMembers(apiBaseUrl, apiSession.accessToken);
+                render();
+                throw new Error('The member may have been created, but the API did not return an activation token. Refresh the member list and contact an administrator.');
+              }
+              members = [...members, mapApiMember(result.member)];
+              closeModal();
+              render();
+              showInvitationToken(result.invitationToken, name);
+            } catch (error) {
+              showToast(`Could not add member: ${error.message}`);
+            }
+            return;
+          }
           const id = `JC-${String(Math.max(0, ...members.map((member) => Number(member.id.split('-')[1]) || 0)) + 1).padStart(3, '0')}`;
-          members.push({ id, name, phone, status: 'Active' });
+          const member = { id, name, phone, status: 'Active', monthlyTarget: target };
+          members.push(member);
+          localMembers.push(member);
+          if (!saveData()) {
+            members.pop();
+            localMembers.pop();
+            render();
+            showToast('Member was not added because browser storage failed.');
+            return;
+          }
           closeModal();
           render();
-          showToast(`${name} added to this sample group.`);
+          showToast(`${name} added. This browser saved the member on this device.`);
           return;
         }
         const memberId = String(values.get('member'));
@@ -464,9 +792,15 @@
           return;
         }
         contributions.push({ id: member.id, name: member.name, amount, date, method: String(values.get('method')), reference });
+        if (!saveData()) {
+          contributions.pop();
+          render();
+          showToast('Contribution was not added because browser storage failed.');
+          return;
+        }
         closeModal();
         render();
-        showToast('Contribution added to this sample session.');
+        showToast('Contribution saved in this browser on this device.');
       });
 
       document.querySelector('#member-search').addEventListener('input', renderMembers);
@@ -493,6 +827,7 @@
 
       document.querySelector('#today-label').textContent = today.toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
       document.querySelector('#greeting-date').textContent = today.toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      loadSavedData();
       render();
     })();
   </script>

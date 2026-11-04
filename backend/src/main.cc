@@ -1,4 +1,5 @@
 #include <drogon/drogon.h>
+#include <sodium.h>
 
 #include <charconv>
 #include <cstdint>
@@ -11,6 +12,7 @@
 #include <system_error>
 
 #include "database_config.h"
+#include "api_routes.h"
 
 namespace
 {
@@ -66,6 +68,12 @@ int main()
     }
 
     drogon::app().addDbClient(databaseConfig);
+    if (sodium_init() < 0)
+    {
+        std::cerr << "Could not initialize the cryptographic library.\n";
+        return EXIT_FAILURE;
+    }
+    jirani::registerApiRoutes();
     drogon::app().registerHandler(
         "/api/v1/health",
         [](const drogon::HttpRequestPtr &,
@@ -86,6 +94,6 @@ int main()
         },
         {drogon::Get});
 
-    drogon::app().addListener("0.0.0.0", port).run();
+    drogon::app().addListener("127.0.0.1", port).run();
     return EXIT_SUCCESS;
 }

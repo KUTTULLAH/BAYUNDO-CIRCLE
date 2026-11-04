@@ -4,9 +4,9 @@ info:
   version: 0.1.0
   description: |
     Framework-neutral contract for the first chama-management backend.
-    All endpoints are scoped to the signed-in member's chama. Members can
-    read only their own records unless an admin approves a one-time,
-    read-only request for a specific member and date range.
+    All endpoints are scoped to the signed-in member's chama. Member records
+    are activated when an administrator creates them; invited accounts must
+    redeem a one-time token before they can sign in.
 servers:
   - url: https://api.example.invalid/api/v1
     description: Placeholder; set to the deployed API origin.
@@ -459,16 +459,27 @@ paths:
                   type: string
                   format: date
                   description: First day of the effective month; defaults to the current month.
+                role:
+                  type: string
+                  enum: [admin, member]
+                  default: member
       responses:
-        '201':
+        '202':
           description: |
-            Member and invited account created with a unique chama-scoped
-            member code. A 24-hour activation invitation is queued via the
-            configured SMS/WhatsApp provider. Never return the raw invite token.
+            An active member record and invited account are created. The
+            24-hour activation invitation token is returned once to the
+            authenticated administrator for trusted handoff to the member.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemberPaymentStatus'
+                type: object
+                required: [member, invitationToken]
+                properties:
+                  member:
+                    $ref: '#/components/schemas/MemberPaymentStatus'
+                  invitationToken:
+                    type: string
+                    description: One-time activation token. Never log or persist the raw token.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

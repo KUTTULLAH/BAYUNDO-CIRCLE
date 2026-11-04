@@ -34,14 +34,27 @@ CREATE TABLE members (
   full_name VARCHAR(120) NOT NULL,
   role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
   status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  approval_status ENUM('not_required', 'pending', 'approved', 'denied') NOT NULL DEFAULT 'not_required',
+  created_by_member_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin,
+  approved_by_member_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin,
+  approved_at DATETIME,
   joined_on DATE NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT uq_members_id_chama UNIQUE (id, chama_id),
   CONSTRAINT fk_members_chama FOREIGN KEY (chama_id) REFERENCES chamas(id),
   CONSTRAINT fk_members_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_members_creator FOREIGN KEY (created_by_member_id, chama_id) REFERENCES members(id, chama_id),
+  CONSTRAINT fk_members_approver FOREIGN KEY (approved_by_member_id, chama_id) REFERENCES members(id, chama_id),
   CONSTRAINT uq_members_chama_code UNIQUE (chama_id, member_code),
-  INDEX idx_members_chama_status (chama_id, status)
+  CONSTRAINT chk_member_approval_state CHECK (
+    (approval_status = 'not_required' AND approved_by_member_id IS NULL AND approved_at IS NULL)
+    OR (approval_status = 'pending' AND role = 'member' AND created_by_member_id IS NOT NULL AND approved_by_member_id IS NULL AND approved_at IS NULL)
+    OR (approval_status = 'approved' AND role = 'member' AND created_by_member_id IS NOT NULL AND approved_by_member_id IS NOT NULL AND approved_at IS NOT NULL AND created_by_member_id <> approved_by_member_id)
+    OR (approval_status = 'denied' AND role = 'member' AND created_by_member_id IS NOT NULL AND approved_by_member_id IS NOT NULL AND approved_at IS NOT NULL AND created_by_member_id <> approved_by_member_id)
+  ),
+  INDEX idx_members_chama_status (chama_id, status),
+  INDEX idx_members_approval_queue (chama_id, approval_status, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE member_invitations (
