@@ -40,7 +40,6 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --default-authentication-plugin=mysql_native_password
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
           --health-timeout=5s
@@ -83,6 +82,13 @@ jobs:
         env:
           MYSQL_PWD: ${{ env.MYSQL_ROOT_PASSWORD }}
         run: mysql --host="$DB_HOST" --port="$DB_PORT" --user=root < backend/schema.sql
+
+      - name: Configure application database authentication
+        env:
+          MYSQL_PWD: ${{ env.MYSQL_ROOT_PASSWORD }}
+        run: |
+          mysql --host="$DB_HOST" --port="$DB_PORT" --user=root \
+            --execute="ALTER USER '$DB_USER'@'%' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD'"
 
       - name: Verify application database connection
         env:
