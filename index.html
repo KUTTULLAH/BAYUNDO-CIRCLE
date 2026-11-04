@@ -67,6 +67,7 @@
     .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 680; white-space: nowrap; }
     .button:hover { border-color: #b6c8bb; background: #fafcf9; }
     .button:disabled { cursor: not-allowed; opacity: .5; }
+    .button[hidden] { display: none; }
     .button-primary { border-color: var(--green); background: var(--green); color: white; }
     .button-primary:hover { border-color: var(--green-dark); background: var(--green-dark); }
     .button-icon { font-size: 15px; line-height: 1; }
@@ -502,6 +503,7 @@
       let modalMode = 'contribution';
       let modalOpener = null;
       let invitationDetails = null;
+      let modalSubmitting = false;
       let toastTimer;
       const showToast = (message) => {
         const toast = document.querySelector('#toast');
@@ -537,7 +539,8 @@
         if (dateInput) dateInput.value = todayKey;
         formFields.querySelector('input, select')?.focus();
       };
-      const closeModal = () => {
+      const closeModal = (allowSubmitting = false) => {
+        if (modalSubmitting && !allowSubmitting) return;
         backdrop.classList.remove('open');
         backdrop.setAttribute('aria-hidden', 'true');
         document.querySelector('#modal-form').reset();
@@ -699,8 +702,8 @@
       });
       document.querySelector('#modal-close').addEventListener('click', closeModal);
       document.querySelector('#modal-cancel').addEventListener('click', closeModal);
-      backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(); });
-      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && backdrop.classList.contains('open')) closeModal(); });
+      backdrop.addEventListener('click', (event) => { if (event.target === backdrop && !modalSubmitting) closeModal(); });
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && backdrop.classList.contains('open') && !modalSubmitting) closeModal(); });
       formFields.addEventListener('click', async (event) => {
         if (event.target.id !== 'copy-invitation-token' || !invitationDetails) return;
         try {
@@ -712,7 +715,7 @@
       });
       document.querySelector('#modal-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (modalMode === 'invitation') return;
+        if (modalSubmitting || modalMode === 'invitation') return;
         if (!storageReady && !apiSession && modalMode !== 'connect') {
           showToast('Browser storage is unavailable. Changes cannot be saved.');
           return;
@@ -721,14 +724,26 @@
         if (modalMode === 'connect') {
           const passwordInput = document.querySelector('#admin-password');
           const password = String(values.get('adminPassword'));
+          const submitButton = document.querySelector('#modal-submit');
+          modalSubmitting = true;
+          submitButton.disabled = true;
+          submitButton.textContent = 'Connecting...';
+          document.querySelector('#modal-cancel').disabled = true;
+          document.querySelector('#modal-close').disabled = true;
           try {
             const baseUrl = normalizeApiBase(String(values.get('apiUrl')));
             await connectBackend(baseUrl, String(values.get('adminPhone')).trim(), password);
-            closeModal();
+            closeModal(true);
             showToast('Connected. Member records are loaded from the backend.');
           } catch (error) {
             passwordInput.value = '';
             showToast(`Could not connect: ${error.message}`);
+          } finally {
+            modalSubmitting = false;
+            submitButton.disabled = false;
+            submitButton.textContent = 'Sign in';
+            document.querySelector('#modal-cancel').disabled = false;
+            document.querySelector('#modal-close').disabled = false;
           }
           return;
         }
@@ -742,6 +757,12 @@
             return;
           }
           if (apiSession) {
+            const submitButton = document.querySelector('#modal-submit');
+            modalSubmitting = true;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Adding member...';
+            document.querySelector('#modal-cancel').disabled = true;
+            document.querySelector('#modal-close').disabled = true;
             try {
               const result = await apiRequest(apiBaseUrl, '/admin/members', {
                 method: 'POST',
@@ -758,11 +779,17 @@
                 throw new Error('The member may have been created, but the API did not return an activation token. Refresh the member list and contact an administrator.');
               }
               members = [...members, mapApiMember(result.member)];
-              closeModal();
+              closeModal(true);
               render();
               showInvitationToken(result.invitationToken, name);
             } catch (error) {
               showToast(`Could not add member: ${error.message}`);
+            } finally {
+              modalSubmitting = false;
+              submitButton.disabled = false;
+              submitButton.textContent = 'Add member';
+              document.querySelector('#modal-cancel').disabled = false;
+              document.querySelector('#modal-close').disabled = false;
             }
             return;
           }
