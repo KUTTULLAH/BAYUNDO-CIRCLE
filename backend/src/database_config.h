@@ -54,31 +54,4 @@ inline bool readDatabaseConfig(drogon::orm::MysqlConfig &config)
            readRequiredEnvironment("DB_PASSWORD", config.password);
 }
 
-inline std::string databaseConnectionInfo(
-    const drogon::orm::MysqlConfig &config)
-{
-    const auto quote = [](const std::string &value) {
-        std::string escaped;
-        escaped.reserve(value.size() + 2);
-        escaped.push_back('\'');
-        for (const char ch : value)
-        {
-            if (ch == '\'' || ch == '\\')
-            {
-                escaped.push_back('\\');
-            }
-            escaped.push_back(ch);
-        }
-        escaped.push_back('\'');
-        return escaped;
-    };
-
-    return "host=" + quote(config.host) +
-           " port=" + std::to_string(config.port) +
-           " dbname=" + quote(config.databaseName) +
-           " user=" + quote(config.username) +
-           " password=" + quote(config.password) +
-           " password=" + quote(config.password) +
-           " client_encoding=" + quote(config.characterSet);
-}
 }  // namespace jirani
