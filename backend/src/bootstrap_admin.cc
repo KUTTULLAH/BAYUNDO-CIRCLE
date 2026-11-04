@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -12,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -25,6 +27,22 @@
 namespace
 {
 constexpr std::string_view kBootstrapLock = "jirani_circle_initial_admin";
+
+void waitForDatabase(const drogon::orm::DbClientPtr &client)
+{
+    constexpr auto timeout = std::chrono::seconds(30);
+    constexpr auto retryInterval = std::chrono::milliseconds(100);
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (!client->hasAvailableConnections())
+    {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            throw std::runtime_error(
+                "Timed out waiting for a MySQL connection.");
+        }
+        std::this_thread::sleep_for(retryInterval);
+    }
+}
 
 bool validName(const std::string &value)
 {
@@ -259,6 +277,7 @@ int main()
             databaseConfig.connectionNumber);
         client->setTimeout(databaseConfig.timeout);
         client->setReconnectInterval(databaseConfig.reconnectInterval);
+        waitForDatabase(client);
         createInitialAdmin(client,
                            chamaName,
                            fullName,
