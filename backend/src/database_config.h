@@ -78,6 +78,7 @@ inline std::string databaseConnectionInfo(
            " dbname=" + quote(config.databaseName) +
            " user=" + quote(config.username) +
            " password=" + quote(config.password) +
+           " password=" + quote(config.password) +
            " client_encoding=" + quote(config.characterSet);
 }
 }  // namespace jirani
