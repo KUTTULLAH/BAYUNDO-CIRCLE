@@ -51,7 +51,7 @@ jobs:
       - name: Install build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes autoconf autoconf-archive automake build-essential curl default-mysql-client libtool ninja-build pkg-config unzip zip
+          sudo apt-get install --yes autoconf autoconf-archive automake build-essential curl default-mysql-client gdb libtool ninja-build pkg-config unzip zip
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
@@ -105,9 +105,14 @@ jobs:
             'Jirani Circle CI' \
             'CI Administrator' \
             '+254712345678' \
-            'ci-only-bootstrap-password' \
-            | timeout --signal=TERM --kill-after=10s 90s \
-                ./backend/build/jirani-circle-bootstrap-admin
+            'ci-only-bootstrap-password' > "$RUNNER_TEMP/bootstrap-input.txt"
+
+          timeout --signal=TERM --kill-after=10s 90s \
+            gdb --batch --quiet --return-child-result \
+              -ex "set pagination off" \
+              -ex "run < $RUNNER_TEMP/bootstrap-input.txt" \
+              -ex "bt" \
+              --args ./backend/build/jirani-circle-bootstrap-admin
 
           if second_bootstrap_output=$(printf '%s\n' \
             'Second Chama' \
