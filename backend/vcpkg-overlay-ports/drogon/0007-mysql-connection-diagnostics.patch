@@ -1,0 +1,34 @@
+diff --git a/orm_lib/src/mysql_impl/MysqlConnection.cc b/orm_lib/src/mysql_impl/MysqlConnection.cc
+index 5c20c2a..0000000 100644
+--- a/orm_lib/src/mysql_impl/MysqlConnection.cc
++++ b/orm_lib/src/mysql_impl/MysqlConnection.cc
+@@ -60,8 +60,13 @@ MysqlConnection::MysqlConnection(trantor::EventLoop *loop,
+ {
+     static MysqlEnv env;
+     static thread_local MysqlThreadEnv threadEnv;
+     mysql_init(mysqlPtr_.get());
+-    mysql_options(mysqlPtr_.get(), MYSQL_OPT_NONBLOCK, nullptr);
++    const int nonblockingOptionResult =
++        mysql_options(mysqlPtr_.get(), MYSQL_OPT_NONBLOCK, nullptr);
++    if (nonblockingOptionResult != 0)
++    {
++        LOG_ERROR << "Could not enable nonblocking MySQL mode: "
++                  << mysql_error(mysqlPtr_.get());
++    }
+ #ifdef HAS_MYSQL_OPTIONSV
+     mysql_optionsv(mysqlPtr_.get(), MYSQL_OPT_RECONNECT, &reconnect_);
+ #endif
+@@ -128,7 +133,11 @@ void MysqlConnection::init()
+         auto fd = mysql_get_socket(thisPtr->mysqlPtr_.get());
+         if (fd < 0)
+         {
+-            LOG_ERROR << "Connection with MySQL could not be established";
++            LOG_ERROR << "Connection with MySQL could not be established"
++                      << " (client " << mysql_get_client_info()
++                      << ", connect status " << thisPtr->waitStatus_
++                      << ", error " << mysql_errno(thisPtr->mysqlPtr_.get())
++                      << ": " << mysql_error(thisPtr->mysqlPtr_.get()) << ")";
+             if (thisPtr->closeCallback_)
+             {
+                 thisPtr->closeCallback_(thisPtr);
+*** End Patch

@@ -4,7 +4,8 @@ foreach(patch_file
     0002-drogon-config.patch
     0003-deps-redis.patch
     0004-drogon-ctl.patch
-    0005-jsoncpp-static.patch)
+    0005-jsoncpp-static.patch
+    0007-mysql-connection-diagnostics.patch)
     if(NOT EXISTS "${VCPKG_UPSTREAM_DROGON_PORT}/${patch_file}")
         message(FATAL_ERROR "Pinned vcpkg Drogon patch not found: ${patch_file}")
     endif()
@@ -23,6 +24,7 @@ vcpkg_from_github(
         "${VCPKG_UPSTREAM_DROGON_PORT}/0004-drogon-ctl.patch"
         "${VCPKG_UPSTREAM_DROGON_PORT}/0005-jsoncpp-static.patch"
         "${CMAKE_CURRENT_LIST_DIR}/0006-mariadb-config.patch"
+        "${CMAKE_CURRENT_LIST_DIR}/0007-mysql-connection-diagnostics.patch"
 )
 
 vcpkg_check_features(
