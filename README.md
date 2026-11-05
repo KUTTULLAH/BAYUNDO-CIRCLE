@@ -18,6 +18,7 @@ A responsive chama dashboard with browser-only and local-backend modes.
 - The dashboard's backend connection accepts only `localhost` or `127.0.0.1` API URLs. The API allows browser origins served from those local hosts, not arbitrary websites; serve the dashboard at a localhost URL (not directly from `file://` or from published GitHub Pages) to connect it. Browser-only member and contribution data remain separate from backend records.
 - The initial design supports one chama membership per account and KES. Public admin signup is not part of the design.
 - The API's `POST /api/v1/admin/bootstrap` endpoint creates the first chama and administrator once. It is disabled unless `BOOTSTRAP_TOKEN` is configured with at least 32 characters. Generate a random token, set it as a secret in the API host, and send it in the `X-Bootstrap-Token` header over HTTPS with the chama name, admin name, E.164 phone, and a 12-128 character password. After receiving `201 Created`, remove `BOOTSTRAP_TOKEN` from the host and restart the API. Requests after an administrator exists return `409`; a database lock prevents concurrent bootstrap attempts. Never commit or share the bootstrap token.
+- The API binds to `127.0.0.1` by default. For a hosted service, set `API_BIND_ADDRESS` to the address required by its platform (often `0.0.0.0`) and put it behind the provider's HTTPS ingress/reverse proxy and network controls. Do not expose the service directly over plain HTTP.
 - The standalone `backend/build/jirani-circle-bootstrap-admin` command remains available for trusted terminal use. It prompts for the same initial admin details and uses the API's `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` settings.
 - CI applies the schema to MySQL 8 and verifies the API's database readiness. The API contract has not yet been run through an OpenAPI validator.
 
@@ -32,6 +33,8 @@ cmake -S backend -B backend/build `
 cmake --build backend/build --config Release
 $env:PORT = "8080"
 $env:BOOTSTRAP_TOKEN = "<set a random secret of at least 32 characters>"
+# Set this only when your host requires binding beyond loopback.
+# $env:API_BIND_ADDRESS = "0.0.0.0"
 .\backend\build\Release\jirani-circle-api.exe
 ```
 

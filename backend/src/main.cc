@@ -40,6 +40,25 @@ bool readPort(std::uint16_t &port)
     return true;
 }
 
+bool readBindAddress(std::string &address)
+{
+    const char *configuredAddress = std::getenv("API_BIND_ADDRESS");
+    if (configuredAddress == nullptr)
+    {
+        address = "127.0.0.1";
+        return true;
+    }
+
+    const std::string_view value{configuredAddress};
+    if (value.empty() || value.size() > 255)
+    {
+        std::cerr << "API_BIND_ADDRESS must contain 1-255 characters.\n";
+        return false;
+    }
+    address = value;
+    return true;
+}
+
 drogon::HttpResponsePtr healthResponse(bool databaseReady)
 {
     Json::Value body;
@@ -56,7 +75,8 @@ drogon::HttpResponsePtr healthResponse(bool databaseReady)
 int main()
 {
     std::uint16_t port = 0;
-    if (!readPort(port))
+    std::string bindAddress;
+    if (!readPort(port) || !readBindAddress(bindAddress))
     {
         return EXIT_FAILURE;
     }
@@ -94,6 +114,6 @@ int main()
         },
         {drogon::Get});
 
-    drogon::app().addListener("127.0.0.1", port).run();
+    drogon::app().addListener(bindAddress, port).run();
     return EXIT_SUCCESS;
 }
