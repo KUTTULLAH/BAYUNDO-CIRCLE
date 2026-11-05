@@ -10,6 +10,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <ctime>
 #include <exception>
 #include <functional>
@@ -63,7 +64,8 @@ void registerLocalCors()
                 response->addHeader("Access-Control-Allow-Methods",
                                      "GET, POST, OPTIONS");
                 response->addHeader("Access-Control-Allow-Headers",
-                                     "Authorization, Content-Type");
+                                     "Authorization, Content-Type, "
+                                     "X-Bootstrap-Token");
                 response->addHeader("Access-Control-Max-Age", "600");
                 stop(response);
                 return;
@@ -462,6 +464,219 @@ void registerLogin()
             catch (const std::exception &)
             {
                 LOG_ERROR << "Login database operation failed.";
+                (*responseCallback)(errorResponse(
+                    drogon::k500InternalServerError,
+                    "internal_error",
+                    "The request could not be completed."));
+            }
+        },
+        {drogon::Post});
+}
+
+void registerBootstrapAdmin()
+{
+    const char *configuredToken = std::getenv("BOOTSTRAP_TOKEN");
+    const std::string expectedToken =
+        configuredToken == nullptr ? std::string{} : configuredToken;
+    const bool tokenConfigured = !expectedToken.empty();
+    const bool tokenIsStrongEnough = expectedToken.size() >= 32;
+    if (tokenConfigured && !tokenIsStrongEnough)
+    {
+        LOG_ERROR << "BOOTSTRAP_TOKEN must contain at least 32 characters; "
+                     "the bootstrap endpoint is disabled.";
+    }
+
+    drogon::app().registerHandler(
+        "/api/v1/admin/bootstrap",
+        [expectedToken, tokenConfigured, tokenIsStrongEnough](
+            const drogon::HttpRequestPtr &request, Callback &&callback) {
+            auto responseCallback =
+                std::make_shared<Callback>(std::move(callback));
+            if (!tokenConfigured)
+            {
+                (*responseCallback)(errorResponse(
+                    drogon::k404NotFound,
+                    "not_found",
+                    "The bootstrap endpoint is not enabled."));
+                return;
+            }
+            if (!tokenIsStrongEnough)
+            {
+                (*responseCallback)(errorResponse(
+                    drogon::k503ServiceUnavailable,
+                    "bootstrap_unavailable",
+                    "The bootstrap endpoint is not securely configured."));
+                return;
+            }
+
+            const auto suppliedToken = request->getHeader("x-bootstrap-token");
+            if (suppliedToken.size() != expectedToken.size() ||
+                sodium_memcmp(suppliedToken.data(),
+                              expectedToken.data(),
+                              expectedToken.size()) != 0)
+            {
+                (*responseCallback)(errorResponse(
+                    drogon::k401Unauthorized,
+                    "unauthorized",
+                    "A valid bootstrap token is required."));
+                return;
+            }
+
+            const auto body = request->getJsonObject();
+            if (!body || !(*body)["chamaName"].isString() ||
+                !(*body)["fullName"].isString() ||
+                !(*body)["phone"].isString() ||
+                !(*body)["password"].isString())
+            {
+                (*responseCallback)(errorResponse(
+                    drogon::k400BadRequest,
+                    "bad_request",
+                    "Chama name, admin name, phone, and password are required."));
+                return;
+            }
+
+            const auto chamaName = (*body)["chamaName"].asString();
+            const auto fullName = (*body)["fullName"].asString();
+            const auto phone = (*body)["phone"].asString();
+            auto password = (*body)["password"].asString();
+            auto clearPassword = [&]() {
+                if (!password.empty())
+                {
+                    sodium_memzero(password.data(), password.size());
+                }
+                (*body)["password"] = "";
+            };
+            if (!validName(chamaName) || chamaName.size() > 120 ||
+                !validName(fullName) || fullName.size() > 120 ||
+                !validPhone(phone) || !validPassword(password))
+            {
+                clearPassword();
+                (*responseCallback)(errorResponse(
+                    drogon::k422UnprocessableEntity,
+                    "validation_error",
+                    "The chama, administrator, phone, or password is invalid."));
+                return;
+            }
+
+            std::string passwordHash;
+            if (!makePasswordHash(password, passwordHash))
+            {
+                clearPassword();
+                (*responseCallback)(errorResponse(
+                    drogon::k500InternalServerError,
+                    "internal_error",
+                    "The request could not be completed."));
+                return;
+            }
+            clearPassword();
+
+            const auto client = drogon::app().getDbClient();
+            bool lockAcquired = false;
+            bool transactionStarted = false;
+            try
+            {
+                std::lock_guard<std::mutex> lock(databaseMutex);
+                const auto lockResult = client->execSqlSync(
+                    "SELECT GET_LOCK(?, 10) AS acquired",
+                    std::string("jirani_circle_initial_admin"));
+                if (lockResult.empty() || lockResult[0]["acquired"].isNull() ||
+                    lockResult[0]["acquired"].as<int>() != 1)
+                {
+                    (*responseCallback)(errorResponse(
+                        drogon::k503ServiceUnavailable,
+                        "bootstrap_busy",
+                        "The bootstrap operation is currently unavailable."));
+                    sodium_memzero(passwordHash.data(), passwordHash.size());
+                    return;
+                }
+                lockAcquired = true;
+
+                const auto admins = client->execSqlSync(
+                    "SELECT COUNT(*) AS admin_count FROM members "
+                    "WHERE role = 'admin'");
+                if (admins[0]["admin_count"].as<std::uint64_t>() != 0)
+                {
+                    client->execSqlSync(
+                        "SELECT RELEASE_LOCK(?)",
+                        std::string("jirani_circle_initial_admin"));
+                    lockAcquired = false;
+                    sodium_memzero(passwordHash.data(), passwordHash.size());
+                    (*responseCallback)(errorResponse(
+                        drogon::k409Conflict,
+                        "bootstrap_closed",
+                        "An administrator already exists; bootstrap is disabled."));
+                    return;
+                }
+
+                const auto chamaId = drogon::utils::getUuid();
+                const auto userId = drogon::utils::getUuid();
+                const auto memberId = drogon::utils::getUuid();
+                startTransaction(client);
+                transactionStarted = true;
+                client->execSqlSync("INSERT INTO chamas (id, name) VALUES (?, ?)",
+                                    chamaId,
+                                    chamaName);
+                client->execSqlSync(
+                    "INSERT INTO users (id, phone_e164, password_hash, status) "
+                    "VALUES (?, ?, ?, 'active')",
+                    userId,
+                    phone,
+                    passwordHash);
+                client->execSqlSync(
+                    "INSERT INTO members "
+                    "(id, chama_id, user_id, member_code, full_name, role, joined_on) "
+                    "VALUES (?, ?, ?, 'ADMIN-001', ?, 'admin', CURRENT_DATE)",
+                    memberId,
+                    chamaId,
+                    userId,
+                    fullName);
+                client->execSqlSync(
+                    "INSERT INTO audit_events "
+                    "(chama_id, actor_member_id, event_type, resource_type, resource_id) "
+                    "VALUES (?, ?, 'initial_admin_bootstrapped', 'member', ?)",
+                    chamaId,
+                    memberId,
+                    memberId);
+                commitTransaction(client);
+                transactionStarted = false;
+                client->execSqlSync(
+                    "SELECT RELEASE_LOCK(?)",
+                    std::string("jirani_circle_initial_admin"));
+                lockAcquired = false;
+                sodium_memzero(passwordHash.data(), passwordHash.size());
+
+                Json::Value response;
+                response["chama"] = Json::Value(Json::objectValue);
+                response["chama"]["id"] = chamaId;
+                response["chama"]["name"] = chamaName;
+                response["admin"] = Json::Value(Json::objectValue);
+                response["admin"]["id"] = memberId;
+                response["admin"]["fullName"] = fullName;
+                response["admin"]["phone"] = phone;
+                response["admin"]["role"] = "admin";
+                (*responseCallback)(jsonResponse(drogon::k201Created, response));
+            }
+            catch (const std::exception &)
+            {
+                if (transactionStarted)
+                {
+                    rollbackTransaction(client);
+                }
+                if (lockAcquired)
+                {
+                    try
+                    {
+                        client->execSqlSync(
+                            "SELECT RELEASE_LOCK(?)",
+                            std::string("jirani_circle_initial_admin"));
+                    }
+                    catch (const std::exception &)
+                    {
+                        LOG_ERROR << "Could not release initial-admin bootstrap lock.";
+                    }
+                }
+                sodium_memzero(passwordHash.data(), passwordHash.size());
+                LOG_ERROR << "Initial administrator bootstrap failed.";
                 (*responseCallback)(errorResponse(
                     drogon::k500InternalServerError,
                     "internal_error",
@@ -1043,6 +1258,7 @@ namespace jirani
 void registerApiRoutes()
 {
     registerLocalCors();
+    registerBootstrapAdmin();
     registerLogin();
     registerLogout();
     registerAcceptInvite();

@@ -16,8 +16,9 @@ A responsive chama dashboard with browser-only and local-backend modes.
 - [`backend/openapi.yaml`](./backend/openapi.yaml) is the API contract. Members read their own records; an admin can authorize one read-only retrieval of another member's records for a requested date range.
 - Member accounts use phone-number sign-in and one-time activation invitations. Admin-created member records are active immediately; the invited account cannot sign in until the member redeems the token and sets a password. The API returns the token once to the admin for trusted handoff, including when provisioning another admin.
 - The dashboard's backend connection accepts only `localhost` or `127.0.0.1` API URLs. The API allows browser origins served from those local hosts, not arbitrary websites; serve the dashboard at a localhost URL (not directly from `file://` or from published GitHub Pages) to connect it. Browser-only member and contribution data remain separate from backend records.
-- The initial design supports one chama membership per account and KES. A secure one-time bootstrap command must create the first chama and administrator before member invitations can be issued. Public admin signup is not part of the design.
-- `backend/build/jirani-circle-bootstrap-admin` creates the initial chama and administrator only when no administrator exists. It prompts for the chama name, admin name, E.164 phone, and a hidden password; it stores an Argon2id password hash and writes an audit event. Run it once from a trusted terminal after applying the schema. It uses the same `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables as the API.
+- The initial design supports one chama membership per account and KES. Public admin signup is not part of the design.
+- The API's `POST /api/v1/admin/bootstrap` endpoint creates the first chama and administrator once. It is disabled unless `BOOTSTRAP_TOKEN` is configured with at least 32 characters. Generate a random token, set it as a secret in the API host, and send it in the `X-Bootstrap-Token` header over HTTPS with the chama name, admin name, E.164 phone, and a 12-128 character password. After receiving `201 Created`, remove `BOOTSTRAP_TOKEN` from the host and restart the API. Requests after an administrator exists return `409`; a database lock prevents concurrent bootstrap attempts. Never commit or share the bootstrap token.
+- The standalone `backend/build/jirani-circle-bootstrap-admin` command remains available for trusted terminal use. It prompts for the same initial admin details and uses the API's `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` settings.
 - CI applies the schema to MySQL 8 and verifies the API's database readiness. The API contract has not yet been run through an OpenAPI validator.
 
 ### Build the API on Windows
@@ -29,14 +30,14 @@ cmake -S backend -B backend/build `
   -DVCPKG_OVERLAY_PORTS="$PWD/backend/vcpkg-overlay-ports" `
   -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 cmake --build backend/build --config Release
-.\backend\build\Release\jirani-circle-bootstrap-admin.exe
 $env:PORT = "8080"
+$env:BOOTSTRAP_TOKEN = "<set a random secret of at least 32 characters>"
 .\backend\build\Release\jirani-circle-api.exe
 ```
 
-Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. The endpoint returns `503` until it can run a test query against the configured database.
+Check `http://localhost:8080/api/v1/health` for `{"status":"ok"}`. After bootstrapping over HTTPS, remove `BOOTSTRAP_TOKEN` and restart the API. The health endpoint returns `503` until it can run a test query against the configured database.
 
-The **Build C++ API** GitHub Actions workflow builds the backend with Drogon's MySQL driver, applies the draft schema, verifies database readiness, and tests immediate member activation, one-time invitation acceptance, login, logout, duplicate-phone rejection, and local-only CORS against a temporary MySQL 8 service when backend or dashboard files change, on pull requests, or when started manually from the Actions tab.
+The **Build C++ API** GitHub Actions workflow builds the backend with Drogon's MySQL driver, applies the draft schema, verifies database readiness, tests the protected one-time API bootstrap, and checks immediate member activation, invitation acceptance, login, logout, duplicate-phone rejection, and local-only CORS against a temporary MySQL 8 service when backend or dashboard files change, on pull requests, or when started manually from the Actions tab.
 
 ## Publish with GitHub Pages
 

@@ -29,6 +29,7 @@ jobs:
       DB_USER: jirani_ci
       DB_PASSWORD: ci-only-password
       MYSQL_ROOT_PASSWORD: ci-root-password
+      BOOTSTRAP_TOKEN: ci-only-bootstrap-token-at-least-32-characters-long
     services:
       mysql:
         image: mysql:8.0
@@ -51,7 +52,7 @@ jobs:
       - name: Install build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes autoconf autoconf-archive automake build-essential curl default-mysql-client gdb libtool ninja-build pkg-config unzip zip
+          sudo apt-get install --yes autoconf autoconf-archive automake build-essential curl default-mysql-client libtool ninja-build pkg-config unzip zip
 
       - name: Cache vcpkg packages
         uses: actions/cache@v4
@@ -101,30 +102,13 @@ jobs:
 
       - name: Verify one-time administrator bootstrap
         run: |
-          printf '%s\n' \
-            'Jirani Circle CI' \
-            'CI Administrator' \
-            '+254712345678' \
-            'ci-only-bootstrap-password' > "$RUNNER_TEMP/bootstrap-input.txt"
-
-          timeout --signal=TERM --kill-after=10s 90s \
-            gdb --batch --quiet --return-child-result \
-              -ex "set pagination off" \
-              -ex "run < $RUNNER_TEMP/bootstrap-input.txt" \
-              --args ./backend/build/jirani-circle-bootstrap-admin
-
-          if second_bootstrap_output=$(printf '%s\n' \
-            'Second Chama' \
-            'Second Administrator' \
-            '+254712345679' \
-            'ci-only-bootstrap-password' \
-            | timeout --signal=TERM --kill-after=10s 30s \
-                ./backend/build/jirani-circle-bootstrap-admin 2>&1); then
-            echo "Bootstrap unexpectedly allowed a second administrator."
+          ./backend/build/jirani-circle-api > "$RUNNER_TEMP/jirani-circle-api-bootstrap.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          if ! python3 backend/tests/bootstrap_api_ci.py; then
+            cat "$RUNNER_TEMP/jirani-circle-api-bootstrap.log"
             exit 1
           fi
-          printf '%s' "$second_bootstrap_output" \
-            | grep -q "An administrator already exists; bootstrap is disabled."
 
           admin_count=$(MYSQL_PWD="$DB_PASSWORD" mysql \
             --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" \
