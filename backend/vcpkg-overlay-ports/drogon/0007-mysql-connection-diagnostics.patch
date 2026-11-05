@@ -2,7 +2,7 @@ diff --git a/orm_lib/src/mysql_impl/MysqlConnection.cc b/orm_lib/src/mysql_impl/
 index 5c20c2a..0000000 100644
 --- a/orm_lib/src/mysql_impl/MysqlConnection.cc
 +++ b/orm_lib/src/mysql_impl/MysqlConnection.cc
-@@ -60,8 +60,13 @@ MysqlConnection::MysqlConnection(trantor::EventLoop *loop,
+@@ -60,8 +60,14 @@ MysqlConnection::MysqlConnection(trantor::EventLoop *loop,
  {
      static MysqlEnv env;
      static thread_local MysqlThreadEnv threadEnv;
