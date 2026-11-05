@@ -88,6 +88,7 @@
     .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 19px; }
     .panel-title { margin: 0; font-size: 13px; font-weight: 730; letter-spacing: -.15px; }
     .panel-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+    .contribution-mode-note { max-width: 520px; margin: 6px 0 0; color: #8a642c; font-size: 10px; line-height: 1.45; }
     .period-select { padding: 7px 25px 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: #536057; font-size: 10px; }
     .chart-summary { padding: 0 19px 3px; }
     .chart-total { margin: 0 0 3px; font-size: 22px; font-weight: 750; letter-spacing: -.4px; }
@@ -136,6 +137,29 @@
     .link-button:hover { color: var(--green-dark); text-decoration: underline; }
     .transactions-table td { padding-block: 11px; }
     .payment-method { color: #7b867d; }
+
+    .testimonial-panel { margin-top: 17px; }
+    .testimonial-heading { align-items: flex-start; }
+    .testimonial-note { max-width: 430px; margin: 0; color: var(--muted); font-size: 10px; text-align: right; }
+    .testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr)); gap: 12px; padding: 0 18px 18px; }
+    .testimonial-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fcfdfb; }
+    .testimonial-person { display: flex; align-items: center; gap: 9px; }
+    .testimonial-person .avatar { width: 31px; height: 31px; }
+    .testimonial-name { margin: 0; font-size: 11px; font-weight: 720; }
+    .sample-label { display: inline-block; margin-top: 2px; color: #8a938c; font-size: 9px; }
+    .testimonial-placeholder { margin: 12px 0 0; color: #78827b; font-size: 10px; line-height: 1.5; }
+
+    .contact-fab { position: fixed; z-index: 9; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .contact-action { display: grid; width: 48px; height: 48px; place-items: center; border: 0; border-radius: 50%; background: var(--green); color: white; box-shadow: 0 6px 18px rgb(23 36 29 / 22%); font-size: 12px; font-weight: 800; transition: background .15s ease, transform .15s ease; }
+    .contact-action:hover { transform: translateY(-2px); }
+    .contact-whatsapp { background: #168b55; }
+    .contact-whatsapp:hover { background: #117545; }
+    .contact-telegram { background: #168ac4; }
+    .contact-telegram:hover { background: #0876ad; }
+    .contact-email { background: #495b50; }
+    .contact-email:hover { background: #34443a; }
+    .contact-action svg { display: block; width: 25px; height: 25px; fill: currentColor; }
+    .contact-action:focus-visible { outline: 3px solid #9bc9aa; outline-offset: 3px; }
 
     .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; background: rgb(20 30 24 / 42%); }
     .modal-backdrop.open { display: flex; }
@@ -196,6 +220,11 @@
       .form-grid { grid-template-columns: 1fr; }
       .field-wide { grid-column: auto; }
       .chart { gap: 7px; padding-inline: 14px; }
+      .testimonial-heading { flex-direction: column; }
+      .testimonial-note { text-align: left; }
+      .testimonial-grid { grid-template-columns: 1fr; padding-inline: 14px; }
+      .contact-fab { right: 12px; bottom: 12px; gap: 8px; }
+      .contact-action { width: 44px; height: 44px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
@@ -239,7 +268,7 @@
         <section aria-labelledby="page-title">
           <div class="page-heading">
             <div><p class="eyebrow" id="greeting-date"></p><h1 id="page-title">Good afternoon, Admin</h1><p class="heading-copy">Here's what's happening with your chama.</p></div>
-            <button class="button button-primary" id="record-top" type="button"><span class="button-icon" aria-hidden="true">+</span>Record contribution</button>
+            <button class="button button-primary" id="record-top" type="button" aria-describedby="contribution-mode-note"><span class="button-icon" aria-hidden="true">+</span>Record contribution</button>
           </div>
 
           <div class="stats" aria-label="Group summary">
@@ -296,16 +325,36 @@
         </section>
 
         <section class="panel table-panel" id="contributions" aria-labelledby="transactions-title">
-          <div class="panel-header"><div><h2 class="panel-title" id="transactions-title">Recent contributions</h2><p class="panel-subtitle">Latest payments recorded by your group</p></div><button class="link-button" id="view-all" type="button">View all</button></div>
+          <div class="panel-header"><div><h2 class="panel-title" id="transactions-title">Recent contributions</h2><p class="panel-subtitle">Latest payments recorded by your group</p><p class="contribution-mode-note" id="contribution-mode-note" role="status" aria-live="polite"></p></div><button class="link-button" id="view-all" type="button">View all</button></div>
           <div class="table-scroll"><table class="transactions-table">
             <thead><tr><th scope="col">Member</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Reference</th><th scope="col">Amount</th></tr></thead>
             <tbody id="transaction-rows"></tbody>
           </table></div>
           <div class="table-foot"><span id="transaction-count-label">Showing 0 contributions</span><span id="contribution-storage-note">Browser-only entries</span></div>
         </section>
+
+        <section class="panel testimonial-panel" aria-labelledby="testimonials-title">
+          <div class="panel-header testimonial-heading">
+            <div><h2 class="panel-title" id="testimonials-title">Member testimonials</h2><p class="panel-subtitle">A space for real stories from your chama</p></div>
+            <p class="testimonial-note">Sample names only. These are not real testimonials or endorsements; replace them with approved member quotes before publishing.</p>
+          </div>
+          <div class="testimonial-grid">
+            <article class="testimonial-card"><div class="testimonial-person"><span class="avatar" aria-hidden="true">WW</span><div><h3 class="testimonial-name">Wekesa Wanyonyi</h3><span class="sample-label">Sample Luhya name</span></div></div><p class="testimonial-placeholder">Add an approved member quote here.</p></article>
+            <article class="testimonial-card"><div class="testimonial-person"><span class="avatar" aria-hidden="true">NN</span><div><h3 class="testimonial-name">Nekesa Namisi</h3><span class="sample-label">Sample Luhya name</span></div></div><p class="testimonial-placeholder">Add an approved member quote here.</p></article>
+            <article class="testimonial-card"><div class="testimonial-person"><span class="avatar" aria-hidden="true">WB</span><div><h3 class="testimonial-name">Wafula Barasa</h3><span class="sample-label">Sample Luhya name</span></div></div><p class="testimonial-placeholder">Add an approved member quote here.</p></article>
+            <article class="testimonial-card"><div class="testimonial-person"><span class="avatar" aria-hidden="true">NW</span><div><h3 class="testimonial-name">Nasimiyu Wekesa</h3><span class="sample-label">Sample Luhya name</span></div></div><p class="testimonial-placeholder">Add an approved member quote here.</p></article>
+            <article class="testimonial-card"><div class="testimonial-person"><span class="avatar" aria-hidden="true">BM</span><div><h3 class="testimonial-name">Barasa Makokha</h3><span class="sample-label">Sample Luhya name</span></div></div><p class="testimonial-placeholder">Add an approved member quote here.</p></article>
+          </div>
+        </section>
       </div>
     </main>
   </div>
+
+  <nav class="contact-fab" aria-label="Contact links">
+    <a class="contact-action contact-whatsapp" href="https://wa.me/254798072930" target="_blank" rel="noopener noreferrer" aria-label="Contact us on WhatsApp at 0798 072 930" title="WhatsApp: 0798 072 930"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3C8.86 3 3.02 8.82 3.02 15.98c0 2.3.61 4.55 1.77 6.54L3 29l6.67-1.75a13.1 13.1 0 0 0 6.36 1.62h.01c7.18 0 13.02-5.82 13.02-12.98A12.9 12.9 0 0 0 25.24 6.7 12.93 12.93 0 0 0 16.04 3Zm0 23.65h-.01c-1.94 0-3.85-.52-5.51-1.51l-.4-.24-3.96 1.04 1.06-3.85-.26-.4a10.75 10.75 0 0 1-1.65-5.71c0-5.92 4.82-10.74 10.75-10.74 2.87 0 5.57 1.12 7.6 3.15a10.67 10.67 0 0 1 3.14 7.6c0 5.92-4.82 10.66-10.76 10.66Zm5.9-8.03c-.32-.16-1.9-.94-2.2-1.05-.3-.1-.51-.16-.73.16-.22.32-.84 1.05-1.03 1.26-.19.22-.38.24-.7.08-.32-.16-1.36-.5-2.59-1.58-.96-.85-1.61-1.9-1.8-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.57.16-.19.22-.32.32-.54.1-.22.05-.41-.03-.57-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.55-.73-.56h-.62c-.22 0-.57.08-.86.4-.3.33-1.13 1.1-1.13 2.68s1.16 3.11 1.32 3.33c.16.21 2.27 3.46 5.5 4.86.77.33 1.37.53 1.84.68.77.24 1.47.21 2.03.13.62-.09 1.9-.78 2.17-1.53.27-.76.27-1.4.19-1.53-.08-.14-.3-.22-.62-.38Z"/></svg></a>
+    <a class="contact-action contact-telegram" href="https://t.me/Adz" target="_blank" rel="noopener noreferrer" aria-label="Contact us on Telegram at @Adz" title="Telegram: @Adz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.7 4.35c.3-1.16-.44-1.62-1.24-1.33L2.08 10.3c-1.2.47-1.18 1.14-.22 1.43l4.7 1.47 1.8 5.56c.22.62.12.87.76.87.5 0 .72-.23 1-.5l2.28-2.22 4.74 3.5c.87.48 1.5.23 1.72-.8L21.7 4.35ZM8.06 12.86l10.2-6.43c.5-.3.96-.14.58.2l-8.4 7.58-.33 3.55-2.05-4.9Z"/></svg></a>
+    <a class="contact-action contact-email" href="mailto:samuelwalukhu76@gmail.com" aria-label="Email samuelwalukhu76@gmail.com" title="Email: samuelwalukhu76@gmail.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm-.4 4.25-6.38 4.9a2 2 0 0 1-2.44 0L4.4 8.25a1 1 0 1 1 1.22-1.58L12 11.5l6.38-4.83a1 1 0 1 1 1.22 1.58Z"/></svg></a>
+  </nav>
 
   <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
@@ -422,12 +471,25 @@
           : monthEntries.reduce((sum, entry) => sum + entry.amount, 0);
         document.querySelector('#total-savings').textContent = apiSession ? '—' : formatMoney(totalSavings);
         document.querySelector('#active-members').textContent = currentMembers.length;
-        document.querySelector('#record-top').disabled = currentMembers.length === 0 || !storageReady || apiSession !== null;
+        const recordButton = document.querySelector('#record-top');
+        recordButton.disabled = currentMembers.length === 0 || !storageReady || apiSession !== null;
+        recordButton.title = apiSession
+          ? 'Contribution entry is not available in backend mode yet.'
+          : !storageReady
+            ? 'Browser storage is unavailable, so contributions cannot be saved.'
+            : currentMembers.length === 0
+              ? 'Add an active member before recording a contribution.'
+              : 'Record a payment you have already received. This saves only in this browser.';
         document.querySelector('#add-member').disabled = !storageReady && !apiSession;
         document.querySelector('#backend-connect').textContent = apiSession ? 'Disconnect backend' : 'Connect backend';
+        document.querySelector('#contribution-mode-note').textContent = apiSession
+          ? 'Backend mode: member records only. Contribution entry and history are not connected yet.'
+          : !storageReady
+            ? 'Browser storage is unavailable. Contribution entry is disabled.'
+            : 'Browser-only mode: entries save on this device and are not synced or backed up.';
         document.querySelector('#contribution-storage-note').textContent = apiSession
           ? 'Contributions are not connected to the backend'
-          : 'Browser-only entries';
+          : storageReady ? 'Saved on this device only' : 'Storage unavailable';
         document.querySelector('.user-name').textContent = apiSession ? apiSession.fullName : 'Admin Member';
         document.querySelector('#collected-month').textContent = apiSession ? '—' : formatMoney(monthTotal);
         document.querySelector('#members-due').textContent = due.length;
@@ -513,13 +575,17 @@
         toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
       };
       const openModal = (mode) => {
+        if (mode === 'contribution' && apiSession) {
+          showToast('Contribution entry is not connected to the backend yet.');
+          return;
+        }
         modalOpener = document.activeElement;
         modalMode = mode;
         const addMember = mode === 'member';
         const connect = mode === 'connect';
         const invitation = mode === 'invitation';
         document.querySelector('#modal-title').textContent = connect ? 'Connect to your backend' : invitation ? 'Member invitation' : addMember ? 'Add a member' : 'Record a contribution';
-        document.querySelector('#modal-description').textContent = connect ? 'Serve this dashboard from localhost to connect. Sign in with your administrator account; your password and session token are not saved in this browser.' : invitation ? 'Share this one-time activation token with the member through a trusted channel.' : addMember ? 'Register a member in your group.' : 'Enter the payment details below.';
+        document.querySelector('#modal-description').textContent = connect ? 'Serve this dashboard from localhost to connect. Sign in with your administrator account; your password and session token are not saved in this browser.' : invitation ? 'Share this one-time activation token with the member through a trusted channel.' : addMember ? 'Register a member in your group.' : 'Record a payment you have already received. This does not process a payment; the entry is saved only in this browser on this device.';
         document.querySelector('#modal-submit').textContent = connect ? 'Sign in' : addMember ? 'Add member' : 'Save contribution';
         document.querySelector('#modal-submit').hidden = invitation;
         document.querySelector('#modal-cancel').textContent = invitation ? 'Close' : 'Cancel';
@@ -716,6 +782,11 @@
       document.querySelector('#modal-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         if (modalSubmitting || modalMode === 'invitation') return;
+        if (modalMode === 'contribution' && apiSession) {
+          showToast('Contribution entry is not connected to the backend yet.');
+          closeModal();
+          return;
+        }
         if (!storageReady && !apiSession && modalMode !== 'connect') {
           showToast('Browser storage is unavailable. Changes cannot be saved.');
           return;
