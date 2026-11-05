@@ -111,7 +111,6 @@ jobs:
             gdb --batch --quiet --return-child-result \
               -ex "set pagination off" \
               -ex "run < $RUNNER_TEMP/bootstrap-input.txt" \
-              -ex "bt" \
               --args ./backend/build/jirani-circle-bootstrap-admin
 
           if second_bootstrap_output=$(printf '%s\n' \
