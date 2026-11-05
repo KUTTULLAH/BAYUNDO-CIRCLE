@@ -74,11 +74,11 @@ inline std::string databaseConnectionInfo(
     };
 
     return "host=" + quote(config.host) +
-           " port=" + std::to_string(config.port) +
-           " dbname=" + quote(config.databaseName) +
-           " user=" + quote(config.username) +
-           " password=" + quote(config.password) +
-           " client_encoding=" + quote(config.characterSet);
+           "\nport=" + std::to_string(config.port) +
+           "\ndbname=" + quote(config.databaseName) +
+           "\nuser=" + quote(config.username) +
+           "\npassword=" + quote(config.password) +
+           "\nclient_encoding=" + quote(config.characterSet);
 }
 
 }  // namespace jirani
