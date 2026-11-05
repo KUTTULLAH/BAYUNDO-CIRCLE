@@ -4,8 +4,7 @@ foreach(patch_file
     0002-drogon-config.patch
     0003-deps-redis.patch
     0004-drogon-ctl.patch
-    0005-jsoncpp-static.patch
-    0007-mysql-connection-diagnostics.patch)
+    0005-jsoncpp-static.patch)
     if(NOT EXISTS "${VCPKG_UPSTREAM_DROGON_PORT}/${patch_file}")
         message(FATAL_ERROR "Pinned vcpkg Drogon patch not found: ${patch_file}")
     endif()
